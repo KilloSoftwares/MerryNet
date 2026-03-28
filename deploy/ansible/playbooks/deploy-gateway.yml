@@ -1,0 +1,179 @@
+---
+# Maranet Zero — Gateway Deployment Playbook
+- name: Deploy Maranet Gateway Service
+  hosts: gateway_servers
+  become: true
+  vars:
+    app_dir: /opt/maranet
+    go_version: "1.21.8"
+
+  tasks:
+    - name: Update system
+      apt:
+        update_cache: yes
+        upgrade: dist
+
+    - name: Install dependencies
+      apt:
+        name:
+          - wireguard
+          - wireguard-tools
+          - iptables
+          - iproute2
+          - curl
+          - wget
+          - ufw
+        state: present
+
+    # ============================================================
+    # Go Installation
+    # ============================================================
+    - name: Download Go {{ go_version }}
+      get_url:
+        url: "https://go.dev/dl/go{{ go_version }}.linux-amd64.tar.gz"
+        dest: /tmp/go.tar.gz
+      when: not ansible_check_mode
+
+    - name: Install Go
+      unarchive:
+        src: /tmp/go.tar.gz
+        dest: /usr/local
+        remote_src: yes
+      when: not ansible_check_mode
+
+    - name: Set Go PATH
+      lineinfile:
+        path: /etc/profile.d/go.sh
+        line: 'export PATH=$PATH:/usr/local/go/bin'
+        create: yes
+
+    # ============================================================
+    # WireGuard Setup
+    # ============================================================
+    - name: Generate WireGuard keys
+      shell: |
+        wg genkey | tee /etc/wireguard/privatekey | wg pubkey > /etc/wireguard/publickey
+        chmod 600 /etc/wireguard/privatekey
+      args:
+        creates: /etc/wireguard/privatekey
+
+    - name: Read private key
+      slurp:
+        src: /etc/wireguard/privatekey
+      register: wg_private_key
+
+    - name: Read public key
+      slurp:
+        src: /etc/wireguard/publickey
+      register: wg_public_key
+
+    - name: Create WireGuard config
+      copy:
+        dest: /etc/wireguard/wg0.conf
+        content: |
+          [Interface]
+          PrivateKey = {{ wg_private_key.content | b64decode | trim }}
+          Address = {{ wg_address }}
+          ListenPort = {{ wg_listen_port }}
+          PostUp = iptables -A FORWARD -i wg0 -j ACCEPT; iptables -t nat -A POSTROUTING -o {{ external_interface }} -j MASQUERADE
+          PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING -o {{ external_interface }} -j MASQUERADE
+        mode: '0600'
+
+    - name: Enable IP forwarding
+      sysctl:
+        name: "{{ item }}"
+        value: "1"
+        sysctl_set: yes
+        reload: yes
+      loop:
+        - net.ipv4.ip_forward
+        - net.ipv4.conf.all.src_valid_mark
+
+    - name: Enable and start WireGuard
+      systemd:
+        name: wg-quick@wg0
+        state: started
+        enabled: yes
+
+    # ============================================================
+    # Gateway Service
+    # ============================================================
+    - name: Create app directory
+      file:
+        path: "{{ app_dir }}/gateway-service"
+        state: directory
+        mode: '0755'
+
+    - name: Copy gateway source
+      synchronize:
+        src: ../../../gateway-service/
+        dest: "{{ app_dir }}/gateway-service/"
+        delete: yes
+
+    - name: Build gateway service
+      command: /usr/local/go/bin/go build -ldflags="-s -w" -o /usr/local/bin/maranet-gateway ./cmd/gateway
+      args:
+        chdir: "{{ app_dir }}/gateway-service"
+      environment:
+        GOPATH: /root/go
+        CGO_ENABLED: "0"
+
+    - name: Create gateway systemd service
+      copy:
+        dest: /etc/systemd/system/maranet-gateway.service
+        content: |
+          [Unit]
+          Description=Maranet Gateway Service
+          After=network.target wg-quick@wg0.service
+          Wants=wg-quick@wg0.service
+
+          [Service]
+          Type=simple
+          ExecStart=/usr/local/bin/maranet-gateway
+          Restart=always
+          RestartSec=5
+          Environment=WG_INTERFACE=wg0
+          Environment=WG_LISTEN_PORT={{ wg_listen_port }}
+          Environment=WG_ADDRESS={{ wg_address }}
+          Environment=GRPC_PORT=50052
+          Environment=NAT_EXTERNAL_INTERFACE={{ external_interface }}
+          Environment=METRICS_PORT=9091
+          AmbientCapabilities=CAP_NET_ADMIN
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Start gateway service
+      systemd:
+        name: maranet-gateway
+        state: restarted
+        enabled: yes
+        daemon_reload: yes
+
+    # ============================================================
+    # Firewall
+    # ============================================================
+    - name: Configure UFW
+      ufw:
+        rule: allow
+        port: "{{ item.port }}"
+        proto: "{{ item.proto }}"
+      loop:
+        - { port: "22", proto: tcp }
+        - { port: "{{ wg_listen_port }}", proto: udp }
+        - { port: "50052", proto: tcp }
+        - { port: "9091", proto: tcp }
+
+    - name: Enable UFW
+      ufw:
+        state: enabled
+        direction: incoming
+        policy: deny
+
+    - name: Display gateway info
+      debug:
+        msg: |
+          ✅ Gateway deployed:
+            WireGuard Public Key: {{ wg_public_key.content | b64decode | trim }}
+            Listen Port: {{ wg_listen_port }}
+            Address: {{ wg_address }}

@@ -1,0 +1,24 @@
+[package]
+name = "maranet-bootstrap"
+version = "1.0.0"
+edition = "2021"
+description = "Maranet Zero - Lightweight Bootstrap API for zero-rated access"
+
+[dependencies]
+actix-web = "4"
+actix-rt = "2"
+actix-cors = "0.7"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+env_logger = "0.11"
+log = "0.4"
+chrono = { version = "0.4", features = ["serde"] }
+reqwest = { version = "0.11", features = ["json"] }
+dotenv = "0.15"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true

@@ -1,0 +1,284 @@
+syntax = "proto3";
+
+package maranet;
+
+option go_package = "github.com/maranet/proto;maranetpb";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+// ============================================================
+// Node Management Service
+// Main Server <-> Reseller Node communication
+// ============================================================
+
+service NodeService {
+  // Reseller node registers itself with the main server
+  rpc RegisterNode(RegisterNodeRequest) returns (RegisterNodeResponse);
+
+  // Heartbeat stream: node sends periodic health updates
+  rpc Heartbeat(stream HeartbeatRequest) returns (stream HeartbeatResponse);
+
+  // Main server commands the node to manage WireGuard peers
+  rpc CreatePeer(CreatePeerRequest) returns (CreatePeerResponse);
+  rpc RemovePeer(RemovePeerRequest) returns (RemovePeerResponse);
+  rpc UpdatePeer(UpdatePeerRequest) returns (UpdatePeerResponse);
+
+  // List active peers on a node
+  rpc ListPeers(ListPeersRequest) returns (ListPeersResponse);
+
+  // Bidirectional command stream for real-time control
+  rpc CommandStream(stream NodeMessage) returns (stream ServerMessage);
+}
+
+// ============================================================
+// Gateway Service
+// Manages the internet egress WireGuard gateway
+// ============================================================
+
+service GatewayService {
+  // Add a tunnel from reseller node to gateway
+  rpc AddTunnel(AddTunnelRequest) returns (AddTunnelResponse);
+  rpc RemoveTunnel(RemoveTunnelRequest) returns (RemoveTunnelResponse);
+
+  // Get gateway status and stats
+  rpc GetStatus(google.protobuf.Empty) returns (GatewayStatus);
+
+  // Get traffic stats for a specific tunnel
+  rpc GetTunnelStats(TunnelStatsRequest) returns (TunnelStatsResponse);
+}
+
+// ============================================================
+// Messages: Node Registration
+// ============================================================
+
+message RegisterNodeRequest {
+  string device_id = 1;
+  string public_key = 2;
+  string endpoint = 3;          // public IP:port of the node
+  string location = 4;          // geographic location
+  int32 capacity = 5;           // max peers this node can handle
+  string version = 6;           // agent version
+  string platform = 7;          // rpi, vps, android
+  NodeCapabilities capabilities = 8;
+}
+
+message NodeCapabilities {
+  int64 bandwidth_mbps = 1;
+  int64 memory_mb = 2;
+  int32 cpu_cores = 3;
+  bool ipv6_support = 4;
+}
+
+message RegisterNodeResponse {
+  string node_id = 1;
+  string server_public_key = 2;
+  string server_endpoint = 3;
+  string assigned_subnet = 4;   // e.g. 10.0.1.0/24
+  string tunnel_config = 5;     // WireGuard config for node-to-server tunnel
+  int32 heartbeat_interval_sec = 6;
+}
+
+// ============================================================
+// Messages: Heartbeat
+// ============================================================
+
+message HeartbeatRequest {
+  string node_id = 1;
+  int32 active_peers = 2;
+  double cpu_usage = 3;
+  double memory_usage = 4;
+  int64 bytes_rx = 5;
+  int64 bytes_tx = 6;
+  double uptime_seconds = 7;
+  google.protobuf.Timestamp timestamp = 8;
+}
+
+message HeartbeatResponse {
+  bool acknowledged = 1;
+  repeated PendingCommand pending_commands = 2;
+}
+
+message PendingCommand {
+  string command_id = 1;
+  CommandType type = 2;
+  bytes payload = 3;
+}
+
+enum CommandType {
+  COMMAND_TYPE_UNSPECIFIED = 0;
+  COMMAND_CREATE_PEER = 1;
+  COMMAND_REMOVE_PEER = 2;
+  COMMAND_UPDATE_PEER = 3;
+  COMMAND_UPDATE_CONFIG = 4;
+  COMMAND_RESTART = 5;
+  COMMAND_SHUTDOWN = 6;
+}
+
+// ============================================================
+// Messages: Peer Management
+// ============================================================
+
+message CreatePeerRequest {
+  string node_id = 1;
+  string user_id = 2;
+  string subscription_id = 3;
+  string public_key = 4;        // user's WireGuard public key
+  google.protobuf.Timestamp expires_at = 5;
+  string allowed_ips = 6;       // CIDR for this peer
+}
+
+message CreatePeerResponse {
+  bool success = 1;
+  string peer_ip = 2;           // assigned IP for the user
+  string node_endpoint = 3;     // node's public endpoint
+  string node_public_key = 4;   // node's WG public key
+  string dns_servers = 5;       // DNS servers to use
+  int32 keepalive = 6;          // persistent keepalive interval
+  string error = 7;
+}
+
+message RemovePeerRequest {
+  string node_id = 1;
+  string public_key = 2;
+  string user_id = 3;
+}
+
+message RemovePeerResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+message UpdatePeerRequest {
+  string node_id = 1;
+  string public_key = 2;
+  string user_id = 3;
+  google.protobuf.Timestamp new_expires_at = 4;
+}
+
+message UpdatePeerResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+message ListPeersRequest {
+  string node_id = 1;
+}
+
+message ListPeersResponse {
+  repeated PeerInfo peers = 1;
+}
+
+message PeerInfo {
+  string public_key = 1;
+  string user_id = 2;
+  string subscription_id = 3;
+  string allowed_ips = 4;
+  int64 bytes_rx = 5;
+  int64 bytes_tx = 6;
+  google.protobuf.Timestamp last_handshake = 7;
+  google.protobuf.Timestamp expires_at = 8;
+}
+
+// ============================================================
+// Messages: Command Stream (Bidirectional)
+// ============================================================
+
+message NodeMessage {
+  string node_id = 1;
+  oneof message {
+    HeartbeatRequest heartbeat = 2;
+    CommandAck command_ack = 3;
+    PeerEvent peer_event = 4;
+    NodeError error = 5;
+  }
+}
+
+message ServerMessage {
+  oneof message {
+    HeartbeatResponse heartbeat_ack = 1;
+    CreatePeerRequest create_peer = 2;
+    RemovePeerRequest remove_peer = 3;
+    UpdatePeerRequest update_peer = 4;
+    ConfigUpdate config_update = 5;
+  }
+}
+
+message CommandAck {
+  string command_id = 1;
+  bool success = 2;
+  string error = 3;
+}
+
+message PeerEvent {
+  string public_key = 1;
+  PeerEventType event_type = 2;
+  google.protobuf.Timestamp timestamp = 3;
+}
+
+enum PeerEventType {
+  PEER_EVENT_UNSPECIFIED = 0;
+  PEER_CONNECTED = 1;
+  PEER_DISCONNECTED = 2;
+  PEER_EXPIRED = 3;
+  PEER_HANDSHAKE_FAILED = 4;
+}
+
+message NodeError {
+  string code = 1;
+  string message = 2;
+  string details = 3;
+}
+
+message ConfigUpdate {
+  map<string, string> config = 1;
+}
+
+// ============================================================
+// Messages: Gateway
+// ============================================================
+
+message AddTunnelRequest {
+  string node_id = 1;
+  string node_public_key = 2;
+  string node_endpoint = 3;
+  string assigned_subnet = 4;
+}
+
+message AddTunnelResponse {
+  bool success = 1;
+  string gateway_public_key = 2;
+  string gateway_endpoint = 3;
+  string error = 4;
+}
+
+message RemoveTunnelRequest {
+  string node_id = 1;
+  string node_public_key = 2;
+}
+
+message RemoveTunnelResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+message GatewayStatus {
+  int32 active_tunnels = 1;
+  int64 total_bytes_rx = 2;
+  int64 total_bytes_tx = 3;
+  double cpu_usage = 4;
+  double memory_usage = 5;
+  google.protobuf.Timestamp uptime_since = 6;
+}
+
+message TunnelStatsRequest {
+  string node_id = 1;
+}
+
+message TunnelStatsResponse {
+  string node_id = 1;
+  int64 bytes_rx = 2;
+  int64 bytes_tx = 3;
+  google.protobuf.Timestamp last_handshake = 4;
+  bool connected = 5;
+}

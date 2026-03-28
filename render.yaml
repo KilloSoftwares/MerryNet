@@ -1,0 +1,190 @@
+# render.yaml
+services:
+  # Main API Server
+  - type: web
+    name: merry-net-api
+    env: node
+    plan: free
+    region: oregon
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: merry-net-db
+          property: connectionString
+      - key: REDIS_URL
+        fromDatabase:
+          name: merry-net-redis
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: APP_URL
+        value: https://merry-net-api.onrender.com
+      - key: CORS_ORIGIN
+        value: https://merry-net.onrender.com
+      - key: LOG_LEVEL
+        value: info
+      - key: RATE_LIMIT_WINDOW_MS
+        value: 900000
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: 100
+    healthCheckPath: /api/health
+    healthCheckTimeout: 120
+    autoDeploy: true
+    pullRequestPreviewsEnabled: true
+
+  # Bootstrap API
+  - type: web
+    name: merry-net-bootstrap
+    env: rust
+    plan: free
+    region: oregon
+    buildCommand: cargo build --release
+    startCommand: ./target/release/bootstrap-api
+    envVars:
+      - key: RUST_LOG
+        value: info
+      - key: PORT
+        value: 8080
+      - key: DATABASE_URL
+        fromDatabase:
+          name: merry-net-db
+          property: connectionString
+      - key: REDIS_URL
+        fromDatabase:
+          name: merry-net-redis
+          property: connectionString
+      - key: JWT_SECRET
+        fromService:
+          name: merry-net-api
+          property: JWT_SECRET
+    healthCheckPath: /health
+    healthCheckTimeout: 60
+    autoDeploy: true
+
+  # Gateway Service
+  - type: web
+    name: merry-net-gateway
+    env: go
+    plan: free
+    region: oregon
+    buildCommand: go build -o gateway ./cmd/gateway
+    startCommand: ./gateway
+    envVars:
+      - key: RUST_LOG
+        value: info
+      - key: PORT
+        value: 8081
+      - key: DATABASE_URL
+        fromDatabase:
+          name: merry-net-db
+          property: connectionString
+      - key: REDIS_URL
+        fromDatabase:
+          name: merry-net-redis
+          property: connectionString
+      - key: JWT_SECRET
+        fromService:
+          name: merry-net-api
+          property: JWT_SECRET
+      - key: NAT_PORT_RANGE_START
+        value: 40000
+      - key: NAT_PORT_RANGE_END
+        value: 50000
+      - key: WIREGUARD_INTERFACE
+        value: wg0
+      - key: WIREGUARD_PORT
+        value: 51820
+    healthCheckPath: /health
+    healthCheckTimeout: 60
+    autoDeploy: true
+
+  # Reseller Agent
+  - type: web
+    name: merry-net-reseller
+    env: go
+    plan: free
+    region: oregon
+    buildCommand: go build -o reseller ./cmd/agent
+    startCommand: ./reseller
+    envVars:
+      - key: RUST_LOG
+        value: info
+      - key: PORT
+        value: 8082
+      - key: DATABASE_URL
+        fromDatabase:
+          name: merry-net-db
+          property: connectionString
+      - key: REDIS_URL
+        fromDatabase:
+          name: merry-net-redis
+          property: connectionString
+      - key: JWT_SECRET
+        fromService:
+          name: merry-net-api
+          property: JWT_SECRET
+      - key: GRPC_SERVER_URL
+        value: merry-net-api.onrender.com:10000
+      - key: WIREGUARD_CONFIG_PATH
+        value: /app/wireguard
+    healthCheckPath: /health
+    healthCheckTimeout: 60
+    autoDeploy: true
+
+  # Monitoring Services
+  - type: web
+    name: merry-net-monitoring
+    env: docker
+    plan: free
+    region: oregon
+    dockerfilePath: monitoring/Dockerfile
+    envVars:
+      - key: PROMETHEUS_URL
+        value: http://merry-net-api.onrender.com:9090
+      - key: GRAFANA_URL
+        value: http://merry-net-api.onrender.com:3000
+      - key: REDIS_URL
+        fromDatabase:
+          name: merry-net-redis
+          property: connectionString
+    healthCheckPath: /health
+    healthCheckTimeout: 60
+    autoDeploy: true
+
+databases:
+  # Primary Database
+  - name: merry-net-db
+    plan: free
+    region: oregon
+    databaseName: merrynet
+    user: merrynet_user
+
+  # Redis Cache
+  - name: merry-net-redis
+    plan: free
+    region: oregon
+
+# Cron Jobs
+crons:
+  - name: cleanup-expired-sessions
+    schedule: "0 2 * * *"
+    command: curl -X POST https://merry-net-api.onrender.com/api/admin/cleanup-sessions
+    timezone: UTC
+
+  - name: backup-database
+    schedule: "0 3 * * 0"
+    command: curl -X POST https://merry-net-api.onrender.com/api/admin/backup
+    timezone: UTC
+
+  - name: update-server-status
+    schedule: "*/5 * * * *"
+    command: curl -X POST https://merry-net-api.onrender.com/api/admin/update-status
+    timezone: UTC

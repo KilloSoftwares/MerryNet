@@ -1,0 +1,222 @@
+version: '3.9'
+
+name: maranet
+
+services:
+  # ============================================================
+  # PostgreSQL Database
+  # ============================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: maranet-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: maranet
+      POSTGRES_USER: maranet
+      POSTGRES_PASSWORD: maranet_secret
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U maranet"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - maranet-net
+
+  # ============================================================
+  # Redis
+  # ============================================================
+  redis:
+    image: redis:7-alpine
+    container_name: maranet-redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - maranet-net
+
+  # ============================================================
+  # Main API Server (Node.js)
+  # ============================================================
+  main-server:
+    build:
+      context: ../main-server
+      dockerfile: Dockerfile
+    container_name: maranet-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOST: 0.0.0.0
+      DATABASE_URL: postgresql://maranet:maranet_secret@postgres:5432/maranet?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-change-this-in-production-to-a-random-secret}
+      JWT_EXPIRES_IN: 7d
+      GRPC_PORT: 50051
+      GRPC_HOST: 0.0.0.0
+      GATEWAY_HOST: gateway
+      GATEWAY_GRPC_PORT: 50052
+      MPESA_CONSUMER_KEY: ${MPESA_CONSUMER_KEY:-}
+      MPESA_CONSUMER_SECRET: ${MPESA_CONSUMER_SECRET:-}
+      MPESA_BUSINESS_SHORT_CODE: ${MPESA_BUSINESS_SHORT_CODE:-174379}
+      MPESA_PASS_KEY: ${MPESA_PASS_KEY:-}
+      MPESA_CALLBACK_URL: ${MPESA_CALLBACK_URL:-https://api.maranet.app/api/v1/payments/mpesa/callback}
+      MPESA_ENVIRONMENT: ${MPESA_ENVIRONMENT:-sandbox}
+      MPESA_BASE_URL: ${MPESA_BASE_URL:-https://sandbox.safaricom.co.ke}
+      LOG_LEVEL: info
+    ports:
+      - "3000:3000"
+      - "50051:50051"
+    networks:
+      - maranet-net
+
+  # ============================================================
+  # Bootstrap API (Rust)
+  # ============================================================
+  bootstrap-api:
+    build:
+      context: ../bootstrap-api
+      dockerfile: Dockerfile
+    container_name: maranet-bootstrap
+    restart: unless-stopped
+    depends_on:
+      - main-server
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8080
+      MAIN_SERVER_URL: http://main-server:3000
+      RUST_LOG: info
+    ports:
+      - "8080:8080"
+    networks:
+      - maranet-net
+
+  # ============================================================
+  # Gateway Service (Go + WireGuard)
+  # ============================================================
+  gateway:
+    build:
+      context: ../gateway-service
+      dockerfile: Dockerfile
+    container_name: maranet-gateway
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+    environment:
+      WG_INTERFACE: wg0
+      WG_LISTEN_PORT: 51820
+      WG_ADDRESS: 10.0.0.1/16
+      WG_PRIVATE_KEY: ${GATEWAY_WG_PRIVATE_KEY:-}
+      GRPC_HOST: 0.0.0.0
+      GRPC_PORT: 50052
+      NAT_EXTERNAL_INTERFACE: eth0
+      NAT_INTERNAL_SUBNET: 10.0.0.0/16
+      METRICS_PORT: 9091
+    ports:
+      - "51820:51820/udp"
+      - "50052:50052"
+      - "9091:9091"
+    networks:
+      - maranet-net
+
+  # ============================================================
+  # Prometheus
+  # ============================================================
+  prometheus:
+    image: prom/prometheus:v2.50.0
+    container_name: maranet-prometheus
+    restart: unless-stopped
+    volumes:
+      - ../monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ../monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    networks:
+      - maranet-net
+
+  # ============================================================
+  # Grafana
+  # ============================================================
+  grafana:
+    image: grafana/grafana:10.3.3
+    container_name: maranet-grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-maranet-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s:%(http_port)s/grafana/"
+    volumes:
+      - ../monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    networks:
+      - maranet-net
+
+  # ============================================================
+  # Loki (Log Aggregation)
+  # ============================================================
+  loki:
+    image: grafana/loki:2.9.4
+    container_name: maranet-loki
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    volumes:
+      - loki_data:/loki
+    networks:
+      - maranet-net
+
+# ============================================================
+# Volumes
+# ============================================================
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  loki_data:
+    driver: local
+
+# ============================================================
+# Networks
+# ============================================================
+networks:
+  maranet-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16

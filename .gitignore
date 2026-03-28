@@ -1,0 +1,63 @@
+# Dependencies
+node_modules/
+vendor/
+target/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Build outputs
+dist/
+build/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite
+
+# Docker
+docker-compose.override.yml
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Generated
+main-server/src/grpc/generated/
+gateway-service/internal/proto/
+reseller-agent/internal/proto/
+
+# Flutter
+mobile-app/.dart_tool/
+mobile-app/.packages
+mobile-app/build/
+mobile-app/.flutter-plugins
+mobile-app/.flutter-plugins-dependencies
+
+# Rust
+bootstrap-api/target/
+
+# Secrets
+*.pem
+*.key
+!*.key.example

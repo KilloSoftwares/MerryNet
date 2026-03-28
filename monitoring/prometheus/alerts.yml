@@ -1,0 +1,98 @@
+groups:
+  - name: maranet-api
+    rules:
+      # API is down
+      - alert: APIDown
+        expr: up{job="maranet-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Maranet API is down"
+          description: "The main API server has been unreachable for more than 1 minute."
+
+      # High error rate
+      - alert: HighErrorRate
+        expr: rate(http_request_duration_seconds_count{status=~"5.."}[5m]) / rate(http_request_duration_seconds_count[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High API error rate"
+          description: "More than 5% of API requests are failing (5xx errors)."
+
+      # Slow API responses
+      - alert: SlowAPIResponses
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow API responses"
+          description: "95th percentile API response time is above 2 seconds."
+
+  - name: maranet-gateway
+    rules:
+      # Gateway is down
+      - alert: GatewayDown
+        expr: up{job="maranet-gateway"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Gateway service is down"
+          description: "The WireGuard gateway has been unreachable for more than 1 minute."
+
+      # High tunnel count
+      - alert: HighTunnelCount
+        expr: maranet_gateway_active_tunnels > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High number of active tunnels"
+          description: "{{ $value }} active tunnels on the gateway."
+
+  - name: maranet-infrastructure
+    rules:
+      # PostgreSQL connection pool exhausted
+      - alert: DatabaseConnectionsHigh
+        expr: pg_stat_activity_count > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High database connections"
+          description: "{{ $value }} active database connections."
+
+      # Redis memory usage high
+      - alert: RedisMemoryHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis memory usage above 90%"
+          description: "Redis is using {{ $value | humanizePercentage }} of its max memory."
+
+  - name: maranet-business
+    rules:
+      # No payments in the last hour
+      - alert: NoPayments
+        expr: increase(maranet_payments_total[1h]) == 0
+        for: 2h
+        labels:
+          severity: info
+        annotations:
+          summary: "No payments received in 2 hours"
+          description: "No M-Pesa payments have been processed in the last 2 hours."
+
+      # All reseller nodes offline
+      - alert: AllNodesOffline
+        expr: maranet_reseller_nodes_online == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "All reseller nodes are offline"
+          description: "No reseller nodes are reporting online status."

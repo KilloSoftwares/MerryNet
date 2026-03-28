@@ -1,0 +1,152 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/joho/godotenv"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/maranet/reseller-agent/internal/config"
+	"github.com/maranet/reseller-agent/internal/grpcclient"
+	"github.com/maranet/reseller-agent/internal/health"
+	"github.com/maranet/reseller-agent/internal/store"
+	"github.com/maranet/reseller-agent/internal/wireguard"
+)
+
+func main() {
+	// Load environment
+	_ = godotenv.Load()
+
+	// Initialize logger
+	log.SetFormatter(&log.JSONFormatter{})
+	log.SetLevel(log.DebugLevel)
+
+	log.Info("🚀 Starting Maranet Reseller Agent...")
+
+	// Load config
+	cfg := config.Load()
+
+	// Initialize SQLite store
+	db, err := store.NewStore(cfg.Database.Path)
+	if err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer db.Close()
+	log.Info("✅ SQLite database initialized")
+
+	// Initialize WireGuard manager
+	wgManager, err := wireguard.NewManager(cfg.WireGuard)
+	if err != nil {
+		log.Fatalf("Failed to initialize WireGuard: %v", err)
+	}
+	defer wgManager.Close()
+	log.Info("✅ WireGuard manager initialized")
+
+	// Initialize health monitor
+	healthMonitor := health.NewMonitor(cfg.Health)
+
+	// Context for graceful shutdown
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Connect to main server via gRPC
+	client, err := grpcclient.NewClient(cfg.Server, wgManager, db)
+	if err != nil {
+		log.Fatalf("Failed to connect to main server: %v", err)
+	}
+	defer client.Close()
+	log.Info("✅ Connected to main server")
+
+	// Register node
+	if err := client.RegisterNode(ctx, cfg); err != nil {
+		log.Fatalf("Failed to register node: %v", err)
+	}
+	log.Info("✅ Node registered with main server")
+
+	// Start heartbeat loop
+	go func() {
+		ticker := time.NewTicker(time.Duration(cfg.Health.HeartbeatInterval) * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				metrics := healthMonitor.CollectMetrics()
+				peerCount := wgManager.GetPeerCount()
+				metrics.ActivePeers = peerCount
+
+				if err := client.SendHeartbeat(ctx, metrics); err != nil {
+					log.Warnf("Failed to send heartbeat: %v", err)
+				}
+			}
+		}
+	}()
+
+	// Start peer expiry checker
+	go func() {
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				expired := db.GetExpiredPeers()
+				for _, peer := range expired {
+					log.Infof("⏰ Removing expired peer: %s (user: %s)", peer.PublicKey, peer.UserID)
+					if err := wgManager.RemovePeer(peer.PublicKey); err != nil {
+						log.Errorf("Failed to remove expired peer: %v", err)
+						continue
+					}
+					db.RemovePeer(peer.PublicKey)
+				}
+			}
+		}
+	}()
+
+	// Start command stream (bidirectional gRPC)
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				if err := client.StartCommandStream(ctx); err != nil {
+					log.Errorf("Command stream error: %v, reconnecting in 5s...", err)
+					time.Sleep(5 * time.Second)
+				}
+			}
+		}
+	}()
+
+	log.Info(fmt.Sprintf(`
+╔══════════════════════════════════════════════════════╗
+║                                                      ║
+║        📡 Maranet Reseller Agent                     ║
+║                                                      ║
+║   Device ID:     %-33s  ║
+║   Server:        %-33s  ║
+║   WG Interface:  %-33s  ║
+║   Platform:      %-33s  ║
+║                                                      ║
+╚══════════════════════════════════════════════════════╝`,
+		cfg.DeviceID, cfg.Server.Address, cfg.WireGuard.InterfaceName, cfg.Platform))
+
+	// Wait for shutdown signal
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT)
+	<-sigChan
+
+	log.Info("Shutting down reseller agent...")
+	cancel()
+	time.Sleep(2 * time.Second)
+	log.Info("✅ Reseller agent shut down gracefully")
+}

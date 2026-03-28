@@ -1,0 +1,52 @@
+version: '3.9'
+
+services:
+  # ============================================================
+  # Cognitive AI Services (from twin-ai)
+  # ============================================================
+  
+  llm-core:
+    build:
+      context: ../../twin-ai/twin/services/llm_core
+      dockerfile: Dockerfile
+    container_name: twin-llm-core
+    restart: unless-stopped
+    environment:
+      - API_KEY=twin-dev-key
+      - LLM_PROVIDER=ollama
+      - OLLAMA_URL=http://host.docker.internal:11434
+    ports:
+      - "8001:8001"
+    networks:
+      - maranet-net
+
+  art-personality:
+    build:
+      context: ../../twin-ai/twin/services/art_personality
+      dockerfile: Dockerfile
+    container_name: twin-art-personality
+    restart: unless-stopped
+    environment:
+      - API_KEY=twin-dev-key
+    ports:
+      - "8002:8002"
+    networks:
+      - maranet-net
+
+  hmm-emotion:
+    build:
+      context: ../../twin-ai/twin/services/hmm_emotion
+      dockerfile: Dockerfile
+    container_name: twin-hmm-emotion
+    restart: unless-stopped
+    environment:
+      - API_KEY=twin-dev-key
+    ports:
+      - "8003:8003"
+    networks:
+      - maranet-net
+
+networks:
+  maranet-net:
+    external: true
+    name: maranet_maranet-net

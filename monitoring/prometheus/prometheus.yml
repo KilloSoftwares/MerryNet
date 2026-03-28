@@ -1,0 +1,59 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+rule_files:
+  - "alerts.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+scrape_configs:
+  # Main API Server metrics
+  - job_name: 'maranet-api'
+    static_configs:
+      - targets: ['main-server:9090']
+    metrics_path: /metrics
+
+  # Gateway Service metrics
+  - job_name: 'maranet-gateway'
+    static_configs:
+      - targets: ['gateway:9091']
+    metrics_path: /metrics
+
+  # Bootstrap API (if it exposes metrics)
+  - job_name: 'maranet-bootstrap'
+    static_configs:
+      - targets: ['bootstrap-api:8080']
+    metrics_path: /health
+    scrape_interval: 30s
+
+  # PostgreSQL (with postgres_exporter, if deployed)
+  # - job_name: 'postgres'
+  #   static_configs:
+  #     - targets: ['postgres-exporter:9187']
+
+  # Redis (with redis_exporter, if deployed)
+  # - job_name: 'redis'
+  #   static_configs:
+  #     - targets: ['redis-exporter:9121']
+
+  # Node Exporter for system metrics
+  # - job_name: 'node'
+  #   static_configs:
+  #     - targets: ['node-exporter:9100']
+
+  # Reseller node metrics (dynamically discovered)
+  # - job_name: 'reseller-nodes'
+  #   file_sd_configs:
+  #     - files:
+  #         - /etc/prometheus/reseller_nodes.json
+  #       refresh_interval: 30s
+
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']

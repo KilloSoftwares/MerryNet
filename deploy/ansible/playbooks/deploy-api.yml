@@ -1,0 +1,246 @@
+---
+# Maranet Zero — Main Server Deployment Playbook
+- name: Deploy Maranet API Server
+  hosts: api_servers
+  become: true
+  vars:
+    app_dir: /opt/maranet
+    node_version: "20"
+    postgres_version: "16"
+
+  tasks:
+    # ============================================================
+    # System Setup
+    # ============================================================
+    - name: Update system packages
+      apt:
+        update_cache: yes
+        upgrade: dist
+      when: ansible_os_family == "Debian"
+
+    - name: Install system dependencies
+      apt:
+        name:
+          - curl
+          - wget
+          - git
+          - build-essential
+          - python3-pip
+          - ufw
+          - fail2ban
+          - htop
+          - unzip
+        state: present
+
+    # ============================================================
+    # Node.js
+    # ============================================================
+    - name: Install Node.js {{ node_version }}
+      shell: |
+        curl -fsSL https://deb.nodesource.com/setup_{{ node_version }}.x | bash -
+        apt-get install -y nodejs
+      args:
+        creates: /usr/bin/node
+
+    - name: Verify Node.js installation
+      command: node --version
+      register: node_ver
+      changed_when: false
+
+    - name: Display Node.js version
+      debug:
+        msg: "Node.js {{ node_ver.stdout }}"
+
+    # ============================================================
+    # PostgreSQL
+    # ============================================================
+    - name: Install PostgreSQL {{ postgres_version }}
+      apt:
+        name:
+          - "postgresql-{{ postgres_version }}"
+          - "postgresql-client-{{ postgres_version }}"
+          - libpq-dev
+        state: present
+
+    - name: Start PostgreSQL
+      systemd:
+        name: postgresql
+        state: started
+        enabled: yes
+
+    - name: Create database user
+      become_user: postgres
+      community.postgresql.postgresql_user:
+        name: maranet
+        password: "{{ lookup('env', 'DB_PASSWORD') | default('maranet_secret', true) }}"
+        role_attr_flags: CREATEDB
+
+    - name: Create database
+      become_user: postgres
+      community.postgresql.postgresql_db:
+        name: maranet
+        owner: maranet
+
+    # ============================================================
+    # Redis
+    # ============================================================
+    - name: Install Redis
+      apt:
+        name: redis-server
+        state: present
+
+    - name: Configure Redis
+      lineinfile:
+        path: /etc/redis/redis.conf
+        regexp: "^maxmemory "
+        line: "maxmemory 512mb"
+
+    - name: Configure Redis eviction policy
+      lineinfile:
+        path: /etc/redis/redis.conf
+        regexp: "^maxmemory-policy "
+        line: "maxmemory-policy allkeys-lru"
+
+    - name: Start Redis
+      systemd:
+        name: redis-server
+        state: restarted
+        enabled: yes
+
+    # ============================================================
+    # Application Deployment
+    # ============================================================
+    - name: Create application directory
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: '0755'
+
+    - name: Create .env file
+      template:
+        src: templates/env.j2
+        dest: "{{ app_dir }}/.env"
+        owner: www-data
+        mode: '0600'
+
+    - name: Copy application files
+      synchronize:
+        src: ../../../main-server/
+        dest: "{{ app_dir }}/main-server/"
+        delete: yes
+        rsync_opts:
+          - "--exclude=node_modules"
+          - "--exclude=dist"
+          - "--exclude=.env"
+
+    - name: Install Node.js dependencies
+      command: npm ci --production=false
+      args:
+        chdir: "{{ app_dir }}/main-server"
+
+    - name: Generate Prisma client
+      command: npx prisma generate
+      args:
+        chdir: "{{ app_dir }}/main-server"
+
+    - name: Run database migrations
+      command: npx prisma migrate deploy
+      args:
+        chdir: "{{ app_dir }}/main-server"
+      environment:
+        DATABASE_URL: "postgresql://maranet:{{ lookup('env', 'DB_PASSWORD') | default('maranet_secret', true) }}@localhost:5432/maranet"
+
+    - name: Seed database
+      command: npx tsx prisma/seed.ts
+      args:
+        chdir: "{{ app_dir }}/main-server"
+      environment:
+        DATABASE_URL: "postgresql://maranet:{{ lookup('env', 'DB_PASSWORD') | default('maranet_secret', true) }}@localhost:5432/maranet"
+      ignore_errors: yes
+
+    - name: Build TypeScript
+      command: npm run build
+      args:
+        chdir: "{{ app_dir }}/main-server"
+
+    # ============================================================
+    # Systemd Service
+    # ============================================================
+    - name: Create systemd service
+      copy:
+        dest: /etc/systemd/system/maranet-api.service
+        content: |
+          [Unit]
+          Description=Maranet Zero API Server
+          After=network.target postgresql.service redis-server.service
+          Wants=postgresql.service redis-server.service
+
+          [Service]
+          Type=simple
+          User=www-data
+          Group=www-data
+          WorkingDirectory={{ app_dir }}/main-server
+          EnvironmentFile={{ app_dir }}/.env
+          ExecStart=/usr/bin/node dist/index.js
+          Restart=always
+          RestartSec=5
+          StandardOutput=journal
+          StandardError=journal
+          SyslogIdentifier=maranet-api
+
+          # Security
+          NoNewPrivileges=yes
+          ProtectSystem=strict
+          ProtectHome=yes
+          ReadWritePaths={{ app_dir }}
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Reload systemd and start service
+      systemd:
+        name: maranet-api
+        state: restarted
+        enabled: yes
+        daemon_reload: yes
+
+    # ============================================================
+    # Firewall
+    # ============================================================
+    - name: Configure UFW defaults
+      ufw:
+        direction: "{{ item.direction }}"
+        policy: "{{ item.policy }}"
+      loop:
+        - { direction: incoming, policy: deny }
+        - { direction: outgoing, policy: allow }
+
+    - name: Allow ports through UFW
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop:
+        - "22"     # SSH
+        - "3000"   # API
+        - "50051"  # gRPC
+        - "443"    # HTTPS (nginx)
+
+    - name: Enable UFW
+      ufw:
+        state: enabled
+
+    - name: Verify deployment
+      uri:
+        url: "http://localhost:3000/api/v1/health"
+        return_content: yes
+      register: health_check
+      until: health_check.status == 200
+      retries: 5
+      delay: 5
+
+    - name: Display health check
+      debug:
+        msg: "✅ API Server deployed: {{ health_check.json }}"
