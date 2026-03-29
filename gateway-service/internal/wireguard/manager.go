@@ -11,34 +11,34 @@ import (
 	"golang.zx2c4.com/wireguard/wgctrl"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 
-	"github.com/maranet/gateway-service/internal/config"
+	"github.com/KilloSoftwares/MerryNet/gateway-service/internal/config"
 )
 
 // Manager manages WireGuard interface and peers
 type Manager struct {
-	client    *wgctrl.Client
-	config    config.WireGuardConfig
-	mu        sync.RWMutex
-	peers     map[string]*PeerInfo // keyed by public key (base64)
-	tunnels   map[string]*TunnelInfo // keyed by node ID
+	client  *wgctrl.Client
+	config  config.WireGuardConfig
+	mu      sync.RWMutex
+	peers   map[string]*PeerInfo   // keyed by public key (base64)
+	tunnels map[string]*TunnelInfo // keyed by node ID
 }
 
 // PeerInfo tracks information about a WireGuard peer
 type PeerInfo struct {
-	PublicKey   wgtypes.Key
-	AllowedIPs  []net.IPNet
-	Endpoint    *net.UDPAddr
-	NodeID      string
-	AddedAt     time.Time
+	PublicKey  wgtypes.Key
+	AllowedIPs []net.IPNet
+	Endpoint   *net.UDPAddr
+	NodeID     string
+	AddedAt    time.Time
 }
 
 // TunnelInfo tracks a node-to-gateway tunnel
 type TunnelInfo struct {
-	NodeID      string
-	PublicKey   wgtypes.Key
-	Endpoint    *net.UDPAddr
-	Subnet      string
-	AddedAt     time.Time
+	NodeID    string
+	PublicKey wgtypes.Key
+	Endpoint  *net.UDPAddr
+	Subnet    string
+	AddedAt   time.Time
 }
 
 // NewManager creates a new WireGuard manager
@@ -110,10 +110,10 @@ func (m *Manager) AddTunnel(nodeID, publicKeyB64, endpointStr, subnet string) er
 	keepalive := 25 * time.Second
 	peerCfg := wgtypes.PeerConfig{
 		PublicKey:                   pubKey,
-		Endpoint:                   endpoint,
-		AllowedIPs:                 []net.IPNet{*ipNet},
+		Endpoint:                    endpoint,
+		AllowedIPs:                  []net.IPNet{*ipNet},
 		PersistentKeepaliveInterval: &keepalive,
-		ReplaceAllowedIPs:          true,
+		ReplaceAllowedIPs:           true,
 	}
 
 	err = m.client.ConfigureDevice(m.config.InterfaceName, wgtypes.Config{

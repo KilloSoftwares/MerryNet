@@ -11,11 +11,11 @@ import (
 	"github.com/joho/godotenv"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/maranet/gateway-service/internal/config"
-	grpcserver "github.com/maranet/gateway-service/internal/grpc"
-	"github.com/maranet/gateway-service/internal/metrics"
-	"github.com/maranet/gateway-service/internal/nat"
-	"github.com/maranet/gateway-service/internal/wireguard"
+	"github.com/KilloSoftwares/MerryNet/gateway-service/internal/config"
+	grpcserver "github.com/KilloSoftwares/MerryNet/gateway-service/internal/grpc"
+	"github.com/KilloSoftwares/MerryNet/gateway-service/internal/metrics"
+	"github.com/KilloSoftwares/MerryNet/gateway-service/internal/nat"
+	"github.com/KilloSoftwares/MerryNet/gateway-service/internal/wireguard"
 )
 
 func main() {

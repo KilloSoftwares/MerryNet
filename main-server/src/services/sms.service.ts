@@ -1,6 +1,9 @@
 import { logger } from '../utils/logger';
 import { config } from '../config';
 
+import twilio from 'twilio';
+
+// ... (keep interface and ConsoleSmsProvider)
 export interface SmsProvider {
   send(to: string, message: string): Promise<boolean>;
 }
@@ -13,10 +16,34 @@ class ConsoleSmsProvider implements SmsProvider {
 }
 
 class TwilioSmsProvider implements SmsProvider {
+  private client: twilio.Twilio;
+  private fromNumber: string;
+
+  constructor() {
+    this.client = twilio(
+      process.env.TWILIO_ACCOUNT_SID || '',
+      process.env.TWILIO_AUTH_TOKEN || ''
+    );
+    this.fromNumber = process.env.TWILIO_PHONE_NUMBER || '';
+  }
+
   async send(to: string, message: string): Promise<boolean> {
-    // TODO: Implement actual Twilio logic when credentials are provided
-    logger.warn('Twilio SMS provider not yet fully implemented');
-    return false;
+    try {
+      if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
+         logger.warn('Twilio credentials completely missing, skipping send');
+         return false;
+      }
+      const response = await this.client.messages.create({
+        body: message,
+        from: this.fromNumber,
+        to: to.startsWith('+') ? to : `+${to}`
+      });
+      logger.info(`[Twilio SMS] Sent to ${to}. Message SID: ${response.sid}`);
+      return true;
+    } catch (error: any) {
+      logger.error(`[Twilio SMS] Failed to send SMS to ${to}: ${error.message}`);
+      return false;
+    }
   }
 }
 
@@ -24,8 +51,11 @@ export class SmsService {
   private provider: SmsProvider;
 
   constructor() {
-    // In dev/test, use ConsoleSmsProvider. In production, could switch based on config.
-    this.provider = new ConsoleSmsProvider();
+    if (config.env === 'production' && process.env.TWILIO_ACCOUNT_SID) {
+      this.provider = new TwilioSmsProvider();
+    } else {
+      this.provider = new ConsoleSmsProvider();
+    }
   }
 
   async sendOtp(phone: string, otp: string): Promise<boolean> {

@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 	"fmt"
+	"net"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -11,8 +12,8 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/maranet/gateway-service/internal/nat"
-	"github.com/maranet/gateway-service/internal/wireguard"
+	"github.com/KilloSoftwares/MerryNet/gateway-service/internal/nat"
+	"github.com/KilloSoftwares/MerryNet/gateway-service/internal/wireguard"
 )
 
 // Server implements the GatewayService gRPC server
@@ -42,16 +43,8 @@ func NewServer(wg *wireguard.Manager, natMgr *nat.Manager) *Server {
 }
 
 // Serve starts the gRPC server
-func (s *Server) Serve(lis interface{ Accept() (interface{}, error) }) error {
-	return s.grpcServer.Serve(lis.(interface {
-		Accept() (interface{}, error)
-		Close() error
-		Addr() interface{ String() string }
-	}).(interface {
-		Accept() (interface{}, error)
-		Close() error
-		Addr() interface{ String() string }
-	}).(*interface{}))
+func (s *Server) Serve(lis net.Listener) error {
+	return s.grpcServer.Serve(lis)
 }
 
 // GracefulStop gracefully stops the gRPC server

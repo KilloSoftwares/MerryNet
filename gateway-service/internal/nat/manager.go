@@ -7,7 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/maranet/gateway-service/internal/config"
+	"github.com/KilloSoftwares/MerryNet/gateway-service/internal/config"
 )
 
 // Manager manages iptables NAT rules for internet egress
