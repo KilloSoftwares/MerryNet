@@ -31,6 +31,14 @@ services:
         value: https://merry-net.onrender.com
       - key: LOG_LEVEL
         value: info
+      - key: LLM_SERVICE_URL
+        value: https://twin-ai.onrender.com
+      - key: HMM_SERVICE_URL
+        value: https://twin-ai.onrender.com
+      - key: ART_SERVICE_URL
+        value: https://twin-ai.onrender.com
+      - key: COGNITIVE_API_KEY
+        value: twin-dev-key
       - key: RATE_LIMIT_WINDOW_MS
         value: 900000
       - key: RATE_LIMIT_MAX_REQUESTS
