@@ -15,6 +15,7 @@ import (
 	grpcserver "github.com/KilloSoftwares/MerryNet/gateway-service/internal/grpc"
 	"github.com/KilloSoftwares/MerryNet/gateway-service/internal/metrics"
 	"github.com/KilloSoftwares/MerryNet/gateway-service/internal/nat"
+	"github.com/KilloSoftwares/MerryNet/gateway-service/internal/skyos"
 	"github.com/KilloSoftwares/MerryNet/gateway-service/internal/wireguard"
 )
 
@@ -31,7 +32,17 @@ func main() {
 	// Load config
 	cfg := config.Load()
 
-	// Initialize WireGuard manager
+	// Initialize Sky OS Adapter (bridges legacy managers with Sky OS architecture)
+	skyosConfig := &skyos.Config{
+		NodeID:       cfg.NodeID,
+		NetworkCIDR:  cfg.WireGuard.Address,
+		GatewayIP:    cfg.WireGuard.Address,
+		DNSServers:   cfg.WireGuard.DNS,
+		MTU:          cfg.WireGuard.MTU,
+		Keepalive:    cfg.WireGuard.PersistentKeepalive,
+	}
+
+	// Initialize legacy managers first
 	wgManager, err := wireguard.NewManager(cfg.WireGuard)
 	if err != nil {
 		log.Fatalf("Failed to initialize WireGuard manager: %v", err)
@@ -39,14 +50,25 @@ func main() {
 	defer wgManager.Close()
 	log.Info("✅ WireGuard manager initialized")
 
-	// Initialize NAT manager
 	natManager, err := nat.NewManager(cfg.NAT)
 	if err != nil {
 		log.Fatalf("Failed to initialize NAT manager: %v", err)
 	}
 	log.Info("✅ NAT manager initialized")
 
-	// Setup initial NAT rules
+	// Create Sky OS adapter wrapping legacy managers
+	adapter := skyos.NewAdapter(skyosConfig, wgManager, natManager)
+
+	// Start Sky OS adapter
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	if err := adapter.Start(ctx); err != nil {
+		log.Fatalf("Failed to start Sky OS adapter: %v", err)
+	}
+	log.Info("✅ Sky OS adapter initialized")
+
+	// Setup initial NAT rules (through legacy manager)
 	if err := natManager.SetupMasquerade(); err != nil {
 		log.Warnf("Failed to setup NAT masquerade: %v", err)
 	}
@@ -80,14 +102,15 @@ func main() {
 ║        🛡️  Maranet Gateway Service                   ║
 ║                                                      ║
 ║   WireGuard Interface: ` + cfg.WireGuard.InterfaceName + `                       ║
+║   Sky OS Adapter:      ✅ Enabled                    ║
 ║   gRPC Port:           ` + fmt.Sprintf("%-27d", cfg.GRPC.Port) + ` ║
 ║   Metrics Port:        ` + fmt.Sprintf("%-27d", cfg.Metrics.Port) + ` ║
 ║                                                      ║
 ╚══════════════════════════════════════════════════════╝`)
 
 	// Wait for shutdown signal
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	shutdownCtx, shutdownCancel := context.WithCancel(context.Background())
+	defer shutdownCancel()
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT)
@@ -95,11 +118,15 @@ func main() {
 	select {
 	case sig := <-sigChan:
 		log.Infof("Received signal %v, shutting down...", sig)
-	case <-ctx.Done():
+	case <-shutdownCtx.Done():
 	}
 
 	// Graceful shutdown
 	grpcSrv.GracefulStop()
 	natManager.Cleanup()
 	log.Info("✅ Gateway service shut down gracefully")
+
+	// Stop Sky OS adapter
+	adapter.Stop()
+	log.Info("✅ Sky OS adapter stopped")
 }

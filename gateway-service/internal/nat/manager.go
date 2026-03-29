@@ -155,8 +155,60 @@ func (m *Manager) RemoveNodeForwarding(subnet string) error {
 
 // Cleanup removes all Maranet-related iptables rules
 func (m *Manager) Cleanup() {
-	log.Info("Cleaning up NAT rules...")
-	// In production, use iptables-save/restore or track rules precisely
-	// For now, just log the cleanup
-	log.Info("NAT rules cleanup completed")
+	log.Info("🧹 Cleaning up NAT rules...")
+
+	rules := []struct {
+		table string
+		chain string
+		args  []string
+	}{
+		{
+			table: "nat",
+			chain: "POSTROUTING",
+			args: []string{"-s", m.config.InternalSubnet, "-o", m.config.ExternalInterface, "-j", "MASQUERADE"},
+		},
+		{
+			table: "filter",
+			chain: "FORWARD",
+			args: []string{"-i", "wg0", "-o", m.config.ExternalInterface, "-j", "ACCEPT"},
+		},
+		{
+			table: "filter",
+			chain: "FORWARD",
+			args: []string{"-i", m.config.ExternalInterface, "-o", "wg0", "-m", "state", "--state", "RELATED,ESTABLISHED", "-j", "ACCEPT"},
+		},
+		{
+			table: "filter",
+			chain: "FORWARD",
+			args: []string{"-i", "wg0", "-o", "wg0", "-j", "ACCEPT"},
+		},
+	}
+
+	for _, rule := range rules {
+		if err := m.removeRule(rule.table, rule.chain, rule.args); err != nil {
+			log.Warnf("Failed to remove iptables rule during cleanup: %v", err)
+		}
+	}
+
+	log.Info("✅ NAT rules cleanup completed")
+}
+
+// removeRule removes an iptables rule if it exists
+func (m *Manager) removeRule(table, chain string, args []string) error {
+	// Check if rule exists before attempting to delete
+	checkArgs := append([]string{"-t", table, "-C", chain}, args...)
+	if err := exec.Command("iptables", checkArgs...).Run(); err != nil {
+		// Rule doesn't exist, nothing to do
+		return nil
+	}
+
+	deleteArgs := append([]string{"-t", table, "-D", chain}, args...)
+	cmd := exec.Command("iptables", deleteArgs...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to delete iptables rule: %s: %w", string(output), err)
+	}
+
+	log.Debugf("Removed iptables rule: -t %s -D %s %v", table, chain, args)
+	return nil
 }

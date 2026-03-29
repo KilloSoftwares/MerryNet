@@ -149,11 +149,9 @@ class VpnNotifier extends StateNotifier<VpnState> {
 
       // Connect via wireguard_flutter plugin
       final wireguard = WireGuardFlutter.instance;
-      await wireguard.initialize(tunnelName: 'MaranetZero');
+      await wireguard.initialize();
       await wireguard.startVpn(
-        serverAddress: 'tunnel.maranet.app',
-        wgQuickConfig: configStr,
-        providerBundleIdentifier: 'com.maranet.zero.wireguard',
+        config: configStr,
       );
 
       state = state.copyWith(

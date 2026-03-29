@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:wireguard_flutter/wireguard_flutter.dart';
+import '../../../core/services/vpn_service.dart';
 import '../../../core/theme/app_theme.dart';
 
 class VpnScreen extends ConsumerStatefulWidget {
@@ -34,15 +36,32 @@ class _VpnScreenState extends ConsumerState<VpnScreen>
     if (_isConnecting) return;
 
     setState(() => _isConnecting = true);
-    await Future.delayed(const Duration(seconds: 2));
+    
+    try {
+      // Use the actual VPN service instead of mock delay
+      if (_isConnected) {
+        await ref.read(vpnProvider.notifier).disconnect();
+      } else {
+        await ref.read(vpnProvider.notifier).connect();
+      }
+    } catch (e) {
+      // Handle connection errors
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('VPN connection failed: ${e.toString()}')),
+      );
+    }
+    
     setState(() {
-      _isConnected = !_isConnected;
       _isConnecting = false;
+      // Update local state based on actual VPN status
+      _isConnected = ref.read(vpnProvider).status == VpnStatus.connected;
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final vpnState = ref.watch(vpnProvider);
+    
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -53,9 +72,9 @@ class _VpnScreenState extends ConsumerState<VpnScreen>
               Text('VPN Shield', style: Theme.of(context).textTheme.displayMedium),
               const SizedBox(height: 4),
               Text(
-                _isConnected ? 'Your connection is secured' : 'Tap to connect',
+                vpnState.status == VpnStatus.connected ? 'Your connection is secured' : 'Tap to connect',
                 style: TextStyle(
-                  color: _isConnected ? AppColors.success : AppColors.textMuted,
+                  color: vpnState.status == VpnStatus.connected ? AppColors.success : AppColors.textMuted,
                   fontSize: 15,
                 ),
               ),
@@ -71,7 +90,7 @@ class _VpnScreenState extends ConsumerState<VpnScreen>
                       alignment: Alignment.center,
                       children: [
                         // Pulse rings
-                        if (_isConnected) ...[
+                        if (vpnState.status == VpnStatus.connected) ...[
                           _PulseRing(
                             animation: _pulseController,
                             size: 220,
@@ -91,7 +110,7 @@ class _VpnScreenState extends ConsumerState<VpnScreen>
                           height: 180,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            gradient: _isConnected
+                            gradient: vpnState.status == VpnStatus.connected
                                 ? AppColors.vpnActiveGradient
                                 : LinearGradient(
                                     colors: [
@@ -101,7 +120,7 @@ class _VpnScreenState extends ConsumerState<VpnScreen>
                                   ),
                             boxShadow: [
                               BoxShadow(
-                                color: _isConnected
+                                color: vpnState.status == VpnStatus.connected
                                     ? AppColors.success.withOpacity(0.3)
                                     : AppColors.primary.withOpacity(0.15),
                                 blurRadius: 30,
@@ -112,7 +131,7 @@ class _VpnScreenState extends ConsumerState<VpnScreen>
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              if (_isConnecting)
+                              if (vpnState.status == VpnStatus.connecting)
                                 const SizedBox(
                                   width: 40,
                                   height: 40,
@@ -123,7 +142,7 @@ class _VpnScreenState extends ConsumerState<VpnScreen>
                                 )
                               else
                                 Icon(
-                                  _isConnected
+                                  vpnState.status == VpnStatus.connected
                                       ? Icons.shield_rounded
                                       : Icons.power_settings_new_rounded,
                                   color: Colors.white,
@@ -131,9 +150,9 @@ class _VpnScreenState extends ConsumerState<VpnScreen>
                                 ),
                               const SizedBox(height: 8),
                               Text(
-                                _isConnecting
+                                vpnState.status == VpnStatus.connecting
                                     ? 'Connecting...'
-                                    : _isConnected
+                                    : vpnState.status == VpnStatus.connected
                                         ? 'Connected'
                                         : 'Disconnected',
                                 style: const TextStyle(
@@ -153,7 +172,7 @@ class _VpnScreenState extends ConsumerState<VpnScreen>
               const Spacer(),
 
               // Connection Details
-              if (_isConnected) ...[
+              if (vpnState.status == VpnStatus.connected && vpnState.connectionInfo != null) ...[
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -165,13 +184,51 @@ class _VpnScreenState extends ConsumerState<VpnScreen>
                   ),
                   child: Column(
                     children: [
-                      _DetailRow('Server', 'Nairobi, Kenya 🇰🇪'),
+                      _DetailRow('Server', '${vpnState.connectionInfo!.serverLocation} 🇰🇪'),
                       const Divider(height: 24),
-                      _DetailRow('IP Address', '10.0.1.42'),
+                      _DetailRow('IP Address', vpnState.connectionInfo!.assignedIp),
                       const Divider(height: 24),
-                      _DetailRow('Protocol', 'WireGuard'),
+                      _DetailRow('Protocol', vpnState.connectionInfo!.protocol),
                       const Divider(height: 24),
-                      _DetailRow('Time Left', '23h 14m'),
+                      _DetailRow('Time Left', '${vpnState.connectionInfo!.timeRemaining.inHours}h ${vpnState.connectionInfo!.timeRemaining.inMinutes % 60}m'),
+                    ],
+                  ),
+                ),
+              ] else if (vpnState.status == VpnStatus.error) ...[
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: AppColors.card,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.red.withOpacity(0.2),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.error_outline_rounded, color: Colors.red, size: 32),
+                      const SizedBox(height: 12),
+                      Text(
+                        vpnState.errorMessage ?? 'VPN connection failed',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.red),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            setState(() {
+                              _isConnected = false;
+                              _isConnecting = false;
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Error cleared. Try again.')),
+                            );
+                          },
+                          child: const Text('Try Again'),
+                        ),
+                      ),
                     ],
                   ),
                 ),

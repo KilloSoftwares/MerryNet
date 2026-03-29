@@ -1,11 +1,13 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 )
 
 type Config struct {
+	NodeID    string
 	WireGuard WireGuardConfig
 	GRPC      GRPCConfig
 	NAT       NATConfig
@@ -13,12 +15,13 @@ type Config struct {
 }
 
 type WireGuardConfig struct {
-	InterfaceName string
-	ListenPort    int
-	PrivateKey    string
-	Address       string // CIDR, e.g., 10.0.0.1/16
-	DNS           string
-	MTU           int
+	InterfaceName        string
+	ListenPort           int
+	PrivateKey           string
+	Address              string // CIDR, e.g., 10.0.0.1/16
+	DNS                  string
+	MTU                  int
+	PersistentKeepalive   int
 }
 
 type GRPCConfig struct {
@@ -38,13 +41,15 @@ type MetricsConfig struct {
 
 func Load() *Config {
 	return &Config{
+		NodeID: getEnv("NODE_ID", fmt.Sprintf("gateway-%s", getNodeID())),
 		WireGuard: WireGuardConfig{
-			InterfaceName: getEnv("WG_INTERFACE", "wg0"),
-			ListenPort:    getEnvInt("WG_LISTEN_PORT", 51820),
-			PrivateKey:    getEnv("WG_PRIVATE_KEY", ""),
-			Address:       getEnv("WG_ADDRESS", "10.0.0.1/16"),
-			DNS:           getEnv("WG_DNS", "1.1.1.1,8.8.8.8"),
-			MTU:           getEnvInt("WG_MTU", 1420),
+			InterfaceName:       getEnv("WG_INTERFACE", "wg0"),
+			ListenPort:          getEnvInt("WG_LISTEN_PORT", 51820),
+			PrivateKey:          getEnv("WG_PRIVATE_KEY", ""),
+			Address:             getEnv("WG_ADDRESS", "10.0.0.1/16"),
+			DNS:                 getEnv("WG_DNS", "1.1.1.1,8.8.8.8"),
+			MTU:                 getEnvInt("WG_MTU", 1420),
+			PersistentKeepalive: getEnvInt("WG_PERSISTENT_KEEPALIVE", 25),
 		},
 		GRPC: GRPCConfig{
 			Host: getEnv("GRPC_HOST", "0.0.0.0"),
@@ -59,6 +64,15 @@ func Load() *Config {
 			Port: getEnvInt("METRICS_PORT", 9091),
 		},
 	}
+}
+
+// getNodeID generates a unique node identifier based on hostname
+func getNodeID() string {
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = fmt.Sprintf("unknown-%d", os.Getpid())
+	}
+	return hostname
 }
 
 func getEnv(key, fallback string) string {

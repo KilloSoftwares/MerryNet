@@ -5,6 +5,7 @@ import { config } from '../config';
 import { prisma } from '../config/database';
 import { logger } from '../utils/logger';
 import { generateWireGuardKeys } from '../utils/helpers';
+import { gatewayClient } from './client';
 
 // ============================================================
 // Proto Loading
@@ -97,7 +98,20 @@ async function registerNode(
       },
     });
 
-    logger.info(`✅ Node registered: ${req.device_id}, subnet=${subnet}`);
+    // Notify Go Gateway to set up the tunnel
+    try {
+      await gatewayClient.addTunnel(
+        req.device_id,
+        req.public_key,
+        req.endpoint,
+        subnet
+      );
+    } catch (err) {
+      logger.error(`❌ Failed to sync node ${req.device_id} to gateway:`, err);
+      // We don't fail registration, but NAT will be broken until heartbeat sync
+    }
+
+    logger.info(`✅ Node registered and synced: ${req.device_id}, subnet=${subnet}`);
 
     callback(null, {
       success: true,
@@ -152,15 +166,25 @@ function heartbeat(call: grpc.ServerDuplexStream<any, any>) {
     }
   });
 
-  call.on('end', () => {
+  call.on('end', async () => {
     if (nodeId) {
       logger.info(`💔 Heartbeat stream ended for node: ${nodeId}`);
       const node = connectedNodes.get(nodeId);
       if (node) {
+        // Mark offline in DB
         prisma.reseller.updateMany({
           where: { deviceId: nodeId },
           data: { isOnline: false },
         }).catch(() => {});
+
+        // Remove from Gateway
+        try {
+          await gatewayClient.removeTunnel(nodeId, node.publicKey);
+        } catch (err) {
+          logger.error(`❌ Failed to remove node ${nodeId} from gateway:`, err);
+        }
+
+        connectedNodes.delete(nodeId);
       }
     }
     call.end();

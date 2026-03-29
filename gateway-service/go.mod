@@ -3,6 +3,8 @@ module github.com/KilloSoftwares/MerryNet/gateway-service
 go 1.21
 
 require (
+	github.com/KilloSoftwares/MerryNet/skyos/core v0.0.0
+	github.com/KilloSoftwares/MerryNet/skyos/services v0.0.0-00010101000000-000000000000
 	github.com/joho/godotenv v1.5.1
 	github.com/prometheus/client_golang v1.18.0
 	github.com/sirupsen/logrus v1.9.3
@@ -10,6 +12,10 @@ require (
 	google.golang.org/grpc v1.62.0
 	google.golang.org/protobuf v1.32.0
 )
+
+replace github.com/KilloSoftwares/MerryNet/skyos/core => ../skyos/core
+
+replace github.com/KilloSoftwares/MerryNet/skyos/services => ../skyos/services
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
