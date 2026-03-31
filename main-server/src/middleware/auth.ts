@@ -88,6 +88,10 @@ export function requireReseller(req: Request, _res: Response, next: NextFunction
   next();
 }
 
+import fs from 'fs';
+
+// ... existing code ...
+
 export function generateTokens(user: { id: string; phone: string; isReseller: boolean }) {
   const accessToken = jwt.sign(
     { userId: user.id, phone: user.phone, isReseller: user.isReseller },
@@ -102,4 +106,28 @@ export function generateTokens(user: { id: string; phone: string; isReseller: bo
   );
 
   return { accessToken, refreshToken };
+}
+
+/**
+ * Generates a signed subscription ticket for offline verification by resellers.
+ */
+export function generateSubscriptionTicket(
+  user: { id: string; phone: string },
+  subscription: { id: string; endTime: Date; planId: string }
+) {
+  const privateKey = fs.readFileSync(config.jwt.privateKeyPath);
+  
+  return jwt.sign(
+    {
+      sub: user.id,
+      phone: user.phone,
+      sid: subscription.id,
+      plan: subscription.planId,
+      exp: Math.floor(subscription.endTime.getTime() / 1000),
+      iat: Math.floor(Date.now() / 1000),
+      iss: 'maranet-main-server',
+    },
+    privateKey as jwt.Secret,
+    { algorithm: 'EdDSA' as any }
+  );
 }

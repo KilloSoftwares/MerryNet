@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"net"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -51,10 +52,17 @@ func NewClient(cfg config.ServerConfig, wg *wireguard.Manager, db *store.Store) 
 		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
 
-	// Connect
+	// Pre-test TCP connectivity to quickly detect offline status
+	connTest, tcpErr := net.DialTimeout("tcp", cfg.Address, 3*time.Second)
+	if tcpErr != nil {
+		return nil, fmt.Errorf("server unreachable (offline): %w", tcpErr)
+	}
+	connTest.Close()
+
+	// Connect via gRPC
 	conn, err := grpc.Dial(cfg.Address, opts...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to server: %w", err)
+		return nil, fmt.Errorf("failed to dial server: %w", err)
 	}
 
 	return &Client{
@@ -87,7 +95,11 @@ func (c *Client) RegisterNode(ctx context.Context, cfg *config.Config) error {
 	c.store.SetState("registered_at", time.Now().Format(time.RFC3339))
 	c.store.SetState("public_key", pubKey)
 
-	log.Infof("Node registered: id=%s, pubkey=%s", cfg.DeviceID, pubKey[:20]+"...")
+	displayKey := pubKey
+	if len(displayKey) > 20 {
+		displayKey = displayKey[:20] + "..."
+	}
+	log.Infof("Node registered: id=%s, pubkey=%s", cfg.DeviceID, displayKey)
 
 	return nil
 }

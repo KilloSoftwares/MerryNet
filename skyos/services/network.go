@@ -10,7 +10,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/KilloSoftwares/MerryNet/skyos/core"
 )
-)
 
 // NetworkService handles network operations for Maranet
 type NetworkService struct {

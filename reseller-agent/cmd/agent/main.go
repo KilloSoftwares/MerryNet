@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -11,6 +12,7 @@ import (
 	"github.com/joho/godotenv"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/maranet/reseller-agent/internal/api"
 	"github.com/maranet/reseller-agent/internal/config"
 	"github.com/maranet/reseller-agent/internal/grpcclient"
 	"github.com/maranet/reseller-agent/internal/health"
@@ -56,20 +58,37 @@ func main() {
 
 	// Connect to main server via gRPC
 	client, err := grpcclient.NewClient(cfg.Server, wgManager, db)
+	offlineMode := false
 	if err != nil {
-		log.Fatalf("Failed to connect to main server: %v", err)
-	}
-	defer client.Close()
-	log.Info("✅ Connected to main server")
+		log.Warnf("Failed to connect to main server: %v - Entering OFFLINE mode", err)
+		offlineMode = true
+	} else {
+		defer client.Close()
+		log.Info("✅ Connected to main server")
 
-	// Register node
-	if err := client.RegisterNode(ctx, cfg); err != nil {
-		log.Fatalf("Failed to register node: %v", err)
+		// Register node
+		if err := client.RegisterNode(ctx, cfg); err != nil {
+			log.Warnf("Failed to register node: %v - Entering OFFLINE mode", err)
+			offlineMode = true
+		} else {
+			log.Info("✅ Node registered with main server")
+		}
 	}
-	log.Info("✅ Node registered with main server")
+
+	// Start local API for offline decentralized provisioning
+	localAPI := api.NewServer(cfg.LocalAPI, wgManager, db)
+	go func() {
+		if err := localAPI.Start(); err != nil && err != http.ErrServerClosed {
+			log.Errorf("Local API error: %v", err)
+		}
+	}()
+	defer localAPI.Stop(context.Background())
 
 	// Start heartbeat loop
 	go func() {
+		if offlineMode || client == nil {
+			return
+		}
 		ticker := time.NewTicker(time.Duration(cfg.Health.HeartbeatInterval) * time.Second)
 		defer ticker.Stop()
 
@@ -114,6 +133,9 @@ func main() {
 
 	// Start command stream (bidirectional gRPC)
 	go func() {
+		if offlineMode || client == nil {
+			return
+		}
 		for {
 			select {
 			case <-ctx.Done():
@@ -127,18 +149,24 @@ func main() {
 		}
 	}()
 
+	statusLabel := "🟢 ONLINE"
+	if offlineMode {
+		statusLabel = "🟠 OFFLINE (Local API only)"
+	}
+
 	log.Info(fmt.Sprintf(`
 ╔══════════════════════════════════════════════════════╗
 ║                                                      ║
 ║        📡 Maranet Reseller Agent                     ║
 ║                                                      ║
 ║   Device ID:     %-33s  ║
+║   Status:        %-33s  ║
 ║   Server:        %-33s  ║
 ║   WG Interface:  %-33s  ║
 ║   Platform:      %-33s  ║
 ║                                                      ║
 ╚══════════════════════════════════════════════════════╝`,
-		cfg.DeviceID, cfg.Server.Address, cfg.WireGuard.InterfaceName, cfg.Platform))
+		cfg.DeviceID, statusLabel, cfg.Server.Address, cfg.WireGuard.InterfaceName, cfg.Platform))
 
 	// Wait for shutdown signal
 	sigChan := make(chan os.Signal, 1)

@@ -92,7 +92,7 @@ services:
     buildCommand: go build -o gateway ./cmd/gateway
     startCommand: ./gateway
     envVars:
-      - key: RUST_LOG
+      - key: LOG_LEVEL
         value: info
       - key: PORT
         value: 8081
@@ -129,7 +129,7 @@ services:
     buildCommand: go build -o reseller ./cmd/agent
     startCommand: ./reseller
     envVars:
-      - key: RUST_LOG
+      - key: LOG_LEVEL
         value: info
       - key: PORT
         value: 8082
@@ -145,6 +145,12 @@ services:
         fromService:
           name: merry-net-api
           property: JWT_SECRET
+      - key: LOCAL_API_ENABLED
+        value: "true"
+      - key: LOCAL_API_OPEN_MODE
+        value: "false"
+      - key: MAIN_SERVER_PUBLIC_KEY
+        sync: false
       - key: GRPC_SERVER_URL
         value: merry-net-api.onrender.com:10000
       - key: WIREGUARD_CONFIG_PATH

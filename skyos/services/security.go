@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"skyos-core/core"
+	"github.com/KilloSoftwares/MerryNet/skyos/core"
 )
 
 // SecurityService handles security operations for Maranet

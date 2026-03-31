@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/joho/godotenv"
@@ -37,7 +38,7 @@ func main() {
 		NodeID:       cfg.NodeID,
 		NetworkCIDR:  cfg.WireGuard.Address,
 		GatewayIP:    cfg.WireGuard.Address,
-		DNSServers:   cfg.WireGuard.DNS,
+		DNSServers:   strings.Split(cfg.WireGuard.DNS, ","),
 		MTU:          cfg.WireGuard.MTU,
 		Keepalive:    cfg.WireGuard.PersistentKeepalive,
 	}

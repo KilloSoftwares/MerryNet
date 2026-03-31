@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"skyos-core/core"
+	"github.com/KilloSoftwares/MerryNet/skyos/core"
 )
 
 // VPNService handles VPN operations for Maranet
@@ -134,7 +134,7 @@ func (vs *VPNService) checkConnectionHealth() {
 	vs.mu.RLock()
 	defer vs.mu.RUnlock()
 
-	for id, conn := range vs.connections {
+	for _, conn := range vs.connections {
 		if conn.Status == "connected" {
 			// Check if connection is still active
 			if time.Since(conn.LastActivity) > 5*time.Minute {

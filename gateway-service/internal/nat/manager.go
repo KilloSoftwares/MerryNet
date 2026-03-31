@@ -1,6 +1,7 @@
 package nat
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -210,5 +211,55 @@ func (m *Manager) removeRule(table, chain string, args []string) error {
 	}
 
 	log.Debugf("Removed iptables rule: -t %s -D %s %v", table, chain, args)
+	return nil
+}
+
+// Initialize satisfies the skyos.NATManager interface
+func (m *Manager) Initialize(ctx context.Context) error {
+	log.Info("NAT manager initialized via Sky OS adapter")
+	return nil
+}
+
+// ConfigureNAT satisfies the skyos.NATManager interface
+func (m *Manager) ConfigureNAT(rules []map[string]interface{}) error {
+	for _, rule := range rules {
+		table, _ := rule["table"].(string)
+		chain, _ := rule["chain"].(string)
+		if table == "" {
+			table = "nat"
+		}
+		if chain == "" {
+			chain = "POSTROUTING"
+		}
+		// Extract args from rule
+		if args, ok := rule["args"].([]string); ok {
+			if err := m.addRule(table, chain, args); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// GetActiveConnections satisfies the skyos.NATManager interface
+func (m *Manager) GetActiveConnections() ([]map[string]interface{}, error) {
+	// Return tracked connections from conntrack
+	cmd := exec.Command("conntrack", "-C")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		// conntrack may not be available - return empty
+		return []map[string]interface{}{}, nil
+	}
+
+	return []map[string]interface{}{
+		{
+			"count": string(output),
+		},
+	}, nil
+}
+
+// Close satisfies the skyos.NATManager interface
+func (m *Manager) Close() error {
+	m.Cleanup()
 	return nil
 }

@@ -1,6 +1,7 @@
 package wireguard
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"net"
@@ -77,8 +78,8 @@ func NewManager(cfg config.WireGuardConfig) (*Manager, error) {
 }
 
 // Close closes the WireGuard client
-func (m *Manager) Close() {
-	m.client.Close()
+func (m *Manager) Close() error {
+	return m.client.Close()
 }
 
 // AddTunnel adds a reseller node tunnel to the gateway
@@ -216,4 +217,40 @@ func (m *Manager) GetPublicKey() (string, error) {
 		return "", err
 	}
 	return dev.PublicKey.String(), nil
+}
+
+// Initialize satisfies the skyos.WireguardManager interface
+func (m *Manager) Initialize(ctx context.Context) error {
+	log.Info("WireGuard manager initialized via Sky OS adapter")
+	return nil
+}
+
+// HandlePeer satisfies the skyos.WireguardManager interface
+func (m *Manager) HandlePeer(peerID string, action string) error {
+	switch action {
+	case "add":
+		log.Infof("HandlePeer: add peer %s (use AddTunnel for full setup)", peerID)
+	case "remove":
+		log.Infof("HandlePeer: remove peer %s", peerID)
+	default:
+		return fmt.Errorf("unknown peer action: %s", action)
+	}
+	return nil
+}
+
+// GetStatus satisfies the skyos.WireguardManager interface
+func (m *Manager) GetStatus() (map[string]interface{}, error) {
+	dev, err := m.GetDeviceInfo()
+	if err != nil {
+		return nil, err
+	}
+
+	status := map[string]interface{}{
+		"interface":   m.config.InterfaceName,
+		"public_key":  dev.PublicKey.String(),
+		"listen_port": dev.ListenPort,
+		"peer_count":  len(dev.Peers),
+		"tunnel_count": m.GetTunnelCount(),
+	}
+	return status, nil
 }

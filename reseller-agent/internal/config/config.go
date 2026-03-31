@@ -12,6 +12,7 @@ type Config struct {
 	WireGuard WireGuardConfig
 	Database  DatabaseConfig
 	Health    HealthConfig
+	LocalAPI  LocalAPIConfig
 }
 
 type ServerConfig struct {
@@ -37,6 +38,13 @@ type HealthConfig struct {
 	HeartbeatInterval int // seconds
 }
 
+type LocalAPIConfig struct {
+	Enabled   bool
+	OpenMode  bool
+	Port      int
+	PublicKey string // EdDSA public key of main server for JWT validation
+}
+
 func Load() *Config {
 	return &Config{
 		DeviceID: getEnv("DEVICE_ID", "node-001"),
@@ -59,6 +67,12 @@ func Load() *Config {
 		},
 		Health: HealthConfig{
 			HeartbeatInterval: getEnvInt("HEARTBEAT_INTERVAL", 30),
+		},
+		LocalAPI: LocalAPIConfig{
+			Enabled:   getEnvBool("LOCAL_API_ENABLED", true),
+			OpenMode:  getEnvBool("LOCAL_API_OPEN_MODE", false),
+			Port:      getEnvInt("LOCAL_API_PORT", 8080),
+			PublicKey: getEnv("MAIN_SERVER_PUBLIC_KEY", ""), // Provide via ENV
 		},
 	}
 }
