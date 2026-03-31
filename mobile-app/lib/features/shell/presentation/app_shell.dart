@@ -43,7 +43,7 @@ class AppShell extends StatelessWidget {
           color: AppColors.surface,
           border: Border(
             top: BorderSide(
-              color: AppColors.surfaceLight.withOpacity(0.5),
+              color: AppColors.surfaceLight.withValues(alpha: 0.5),
               width: 0.5,
             ),
           ),
@@ -118,7 +118,7 @@ class _NavItem extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withOpacity(0.4),
+                color: AppColors.primary.withValues(alpha: 0.4),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),

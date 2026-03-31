@@ -69,8 +69,17 @@ autoRenewalQueue.process(async () => {
 
 nodeHealthQueue.process(async () => {
   logger.debug('🏥 Running node health check...');
-  const count = await resellerService.markStaleNodesOffline();
-  return { offlineCount: count };
+  const offlineCount = await resellerService.markStaleNodesOffline();
+  
+  // Also refresh access for online resellers
+  const onlineNodes = await resellerService.getOnlineNodes();
+  for (const node of onlineNodes) {
+    if (node.compensationType === 'FREE_NET' || (node.compensationType as any) === 'DEVELOPER') {
+      await subscriptionService.ensureResellerAccess(node.id);
+    }
+  }
+
+  return { offlineCount, refreshedCount: onlineNodes.length };
 });
 
 payoutQueue.process(async () => {

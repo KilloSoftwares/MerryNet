@@ -13,6 +13,7 @@ type Config struct {
 	Database  DatabaseConfig
 	Health    HealthConfig
 	LocalAPI  LocalAPIConfig
+	DeveloperMode bool
 }
 
 type ServerConfig struct {
@@ -70,10 +71,11 @@ func Load() *Config {
 		},
 		LocalAPI: LocalAPIConfig{
 			Enabled:   getEnvBool("LOCAL_API_ENABLED", true),
-			OpenMode:  getEnvBool("LOCAL_API_OPEN_MODE", false),
+			OpenMode:  getEnvBool("LOCAL_API_OPEN_MODE", false) || getEnvBool("DEVELOPER_MODE", false),
 			Port:      getEnvInt("LOCAL_API_PORT", 8080),
 			PublicKey: getEnv("MAIN_SERVER_PUBLIC_KEY", ""), // Provide via ENV
 		},
+		DeveloperMode: getEnvBool("DEVELOPER_MODE", false),
 	}
 }
 

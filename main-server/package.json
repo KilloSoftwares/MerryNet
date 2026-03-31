@@ -15,7 +15,7 @@
     "grpc:generate": "bash scripts/gen-grpc.sh",
     "test": "vitest",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
-    "lint": "eslint src/",
+    "lint": "eslint \"src/**/*.ts\"",
     "format": "prettier --write src/"
   },
   "dependencies": {
@@ -49,6 +49,8 @@
     "@types/morgan": "^1.9.9",
     "@types/node": "^20.11.19",
     "@types/uuid": "^9.0.8",
+    "@typescript-eslint/eslint-plugin": "^8.58.0",
+    "@typescript-eslint/parser": "^8.58.0",
     "eslint": "^8.57.0",
     "prettier": "^3.2.5",
     "prisma": "^5.10.0",

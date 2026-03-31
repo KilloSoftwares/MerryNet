@@ -532,12 +532,11 @@ func (ss *SecurityService) logAuditEvent(event, source, target, message string, 
 
 	ss.mu.Lock()
 	ss.auditLog = append(ss.auditLog, entry)
-	ss.mu.Unlock()
-
-	// Keep audit log size manageable
+	// Keep audit log size manageable — trim inside the lock to avoid races
 	if len(ss.auditLog) > 10000 {
 		ss.auditLog = ss.auditLog[len(ss.auditLog)-10000:]
 	}
+	ss.mu.Unlock()
 
 	logrus.WithFields(logrus.Fields{
 		"event":   event,
@@ -575,15 +574,30 @@ func (ss *SecurityService) queryAuditLog(query map[string]interface{}) []AuditEn
 
 // checkCertificateExpiration checks for expired certificates
 func (ss *SecurityService) checkCertificateExpiration() {
-	ss.mu.RLock()
-	defer ss.mu.RUnlock()
-
 	now := time.Now()
+
+	// Collect expired cert IDs under RLock to avoid mutation under read lock
+	ss.mu.RLock()
+	var expiredIDs []string
 	for _, cert := range ss.certificates {
 		if cert.Status == "valid" && now.After(cert.ValidTo) {
+			expiredIDs = append(expiredIDs, cert.ID)
+		}
+	}
+	ss.mu.RUnlock()
+
+	// Now update status under write lock and log separately
+	for _, id := range expiredIDs {
+		ss.mu.Lock()
+		cert, exists := ss.certificates[id]
+		if exists {
 			cert.Status = "expired"
+		}
+		ss.mu.Unlock()
+
+		if exists {
 			ss.logAuditEvent("certificate.expired", ss.name, cert.Name, "Certificate expired", map[string]interface{}{
-				"certificate_id": cert.ID,
+				"certificate_id": id,
 			})
 		}
 	}

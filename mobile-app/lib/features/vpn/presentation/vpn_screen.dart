@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:wireguard_flutter/wireguard_flutter.dart';
+
 import '../../../core/services/vpn_service.dart';
 import '../../../core/theme/app_theme.dart';
 
@@ -46,9 +46,11 @@ class _VpnScreenState extends ConsumerState<VpnScreen>
       }
     } catch (e) {
       // Handle connection errors
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('VPN connection failed: ${e.toString()}')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('VPN connection failed: ${e.toString()}')),
+        );
+      }
     }
     
     setState(() {
@@ -109,10 +111,9 @@ class _VpnScreenState extends ConsumerState<VpnScreen>
                           width: 180,
                           height: 180,
                           decoration: BoxDecoration(
-                            shape: BoxShape.circle,
                             gradient: vpnState.status == VpnStatus.connected
                                 ? AppColors.vpnActiveGradient
-                                : LinearGradient(
+                                : const LinearGradient(
                                     colors: [
                                       AppColors.surfaceLight,
                                       AppColors.card,
@@ -121,8 +122,8 @@ class _VpnScreenState extends ConsumerState<VpnScreen>
                             boxShadow: [
                               BoxShadow(
                                 color: vpnState.status == VpnStatus.connected
-                                    ? AppColors.success.withOpacity(0.3)
-                                    : AppColors.primary.withOpacity(0.15),
+                                    ? AppColors.success.withValues(alpha: 0.3)
+                                    : AppColors.primary.withValues(alpha: 0.15),
                                 blurRadius: 30,
                                 spreadRadius: 5,
                               ),
@@ -179,7 +180,7 @@ class _VpnScreenState extends ConsumerState<VpnScreen>
                     color: AppColors.card,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: AppColors.success.withOpacity(0.2),
+                      color: AppColors.success.withValues(alpha: 0.2),
                     ),
                   ),
                   child: Column(
@@ -201,7 +202,7 @@ class _VpnScreenState extends ConsumerState<VpnScreen>
                     color: AppColors.card,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: Colors.red.withOpacity(0.2),
+                      color: Colors.red.withValues(alpha: 0.2),
                     ),
                   ),
                   child: Column(
@@ -211,7 +212,7 @@ class _VpnScreenState extends ConsumerState<VpnScreen>
                       Text(
                         vpnState.errorMessage ?? 'VPN connection failed',
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.red),
+                        style: const TextStyle(color: Colors.red),
                       ),
                       const SizedBox(height: 16),
                       SizedBox(
@@ -311,7 +312,7 @@ class _PulseRing extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(
-              color: color.withOpacity(0.3 * (1 - progress)),
+              color: color.withValues(alpha: 0.3 * (1 - progress)),
               width: 2,
             ),
           ),

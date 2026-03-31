@@ -24,14 +24,17 @@ func main() {
 	// Load environment
 	_ = godotenv.Load()
 
-	// Initialize logger
-	log.SetFormatter(&log.JSONFormatter{})
-	log.SetLevel(log.DebugLevel)
-
-	log.Info("🚀 Starting Maranet Reseller Agent...")
-
 	// Load config
 	cfg := config.Load()
+
+	// Initialize logger
+	log.SetFormatter(&log.JSONFormatter{})
+	if cfg.DeveloperMode {
+		log.SetLevel(log.DebugLevel)
+		log.Debug("🛠️  Developer mode enabled: Debug logging active")
+	} else {
+		log.SetLevel(log.InfoLevel)
+	}
 
 	// Initialize SQLite store
 	db, err := store.NewStore(cfg.Database.Path)

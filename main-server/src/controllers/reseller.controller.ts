@@ -22,10 +22,8 @@ export class ResellerController {
   async getDashboard(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = req.user!.id;
-      const [reseller, earnings] = await Promise.all([
-        resellerService.getByUserId(userId),
-        resellerService.getEarnings(userId).catch(() => null),
-      ]);
+      const reseller = await resellerService.getByUserId(userId);
+      const earnings = await resellerService.getEarnings(reseller.id).catch(() => null);
 
       res.status(200).json(
         successResponse({

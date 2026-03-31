@@ -110,10 +110,10 @@ export class CognitiveService {
       });
 
       // Process Emotion (External)
-      let emotion = await this.processEmotion(input.message, { userId: input.userId });
+      const emotion = await this.processEmotion(input.message, { userId: input.userId });
       
       // Process Personality (External)
-      let personality = await this.processARTMap('interaction', this.extractFeatures(input.message), COGNITIVE_CONFIG.art.maps.interaction, input.userId);
+      const personality = await this.processARTMap('interaction', this.extractFeatures(input.message), COGNITIVE_CONFIG.art.maps.interaction, input.userId);
 
       // Update cognitive state
       await this.storeCognitiveState(input.userId, {

@@ -208,7 +208,7 @@ export class TransformerService {
       const inputEmbeddings = await this.embedText(input.text);
       
       // Add context if provided
-      let contextEmbeddings: number[][] = [];
+      const contextEmbeddings: number[][] = [];
       if (input.context && input.context.length > 0) {
         for (const ctx of input.context) {
           const ctxEmbeddings = await this.embedText(ctx);
@@ -229,7 +229,7 @@ export class TransformerService {
 
       // Task-specific processing
       let text = '';
-      let confidence = 0.8;
+      const confidence = 0.8;
       let tokensUsed = input.text.split(' ').length;
 
       switch (input.task) {

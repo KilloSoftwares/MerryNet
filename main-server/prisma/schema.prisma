@@ -56,6 +56,7 @@ model Reseller {
   activePeers       Int          @default(0) @map("active_peers")
   lastSeen          DateTime?    @map("last_seen")
   isOnline          Boolean      @default(false) @map("is_online")
+  isDevNode         Boolean      @default(false) @map("is_dev_node")
   compensationType  CompensationType @default(COMMISSION) @map("compensation_type")
   freeNetPlanId     String?      @map("free_net_plan_id") @db.VarChar(50)
   commissionRate    Decimal      @default(20.00) @map("commission_rate") @db.Decimal(5, 2)
@@ -78,6 +79,7 @@ model Reseller {
 enum CompensationType {
   COMMISSION
   FREE_NET
+  DEVELOPER
 
   @@map("compensation_type")
 }

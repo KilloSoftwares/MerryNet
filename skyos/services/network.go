@@ -299,11 +299,19 @@ func (ns *NetworkService) getNetworkStatus() map[string]interface{} {
 	interfaces := make([]map[string]interface{}, 0, len(ns.interfaces))
 
 	for name, iface := range ns.interfaces {
+		ipStr := ""
+		if iface.IP != nil {
+			ipStr = iface.IP.String()
+		}
+		gatewayStr := ""
+		if iface.Gateway != nil {
+			gatewayStr = iface.Gateway.String()
+		}
 		ifaceStatus := map[string]interface{}{
-			"name":   name,
-			"status": iface.Status,
-			"ip":     iface.IP.String(),
-			"gateway": iface.Gateway.String(),
+			"name":    name,
+			"status":  iface.Status,
+			"ip":      ipStr,
+			"gateway": gatewayStr,
 		}
 
 		dnsList := make([]string, 0, len(iface.DNS))

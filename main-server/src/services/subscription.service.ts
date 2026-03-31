@@ -181,7 +181,6 @@ export class SubscriptionService {
     return prisma.reseller.findFirst({
       where: {
         isOnline: true,
-        activePeers: { lt: prisma.reseller.fields.capacity as any }, // Simplified
       },
       orderBy: [
         { activePeers: 'asc' }, // Least loaded first
@@ -326,6 +325,62 @@ export class SubscriptionService {
     }
 
     return renewed;
+  }
+  /**
+   * Ensure a reseller has active VPN access (for FREE_NET and DEVELOPER modes)
+   */
+  async ensureResellerAccess(resellerId: string) {
+    const reseller = await prisma.reseller.findUnique({
+      where: { id: resellerId },
+      include: { user: true },
+    });
+
+    if (!reseller) return;
+
+    const now = new Date();
+    const activeSub = await this.getActiveSubscription(reseller.userId);
+
+    // If already has an active sub that expires in more than 12 hours, do nothing
+    if (activeSub && new Date(activeSub.endTime).getTime() > now.getTime() + 12 * 3600000) {
+      return;
+    }
+
+    let endTime: Date;
+    let planId: string;
+
+    if (reseller.compensationType === ('DEVELOPER' as any)) {
+      // 10 years for developers
+      endTime = new Date(now.getTime() + 10 * 365 * 24 * 3600000);
+      planId = 'developer-unlimited';
+    } else if (reseller.compensationType === 'FREE_NET' && reseller.freeNetPlanId) {
+      // 24 hours for free net resellers (refreshed daily via heartbeat)
+      endTime = new Date(now.getTime() + 24 * 3600000);
+      planId = reseller.freeNetPlanId;
+    } else {
+      return;
+    }
+
+    // Create or extend subscription
+    await prisma.subscription.upsert({
+      where: {
+        id: activeSub?.id || '00000000-0000-0000-0000-000000000000', // Dummy if no sub
+      },
+      update: {
+        endTime,
+        status: 'ACTIVE',
+      },
+      create: {
+        userId: reseller.userId,
+        planId,
+        startTime: now,
+        endTime,
+        status: 'ACTIVE',
+      },
+    });
+
+    logger.info(
+      `🛡️ Granted ${reseller.compensationType} access to reseller ${reseller.id} (User: ${reseller.userId})`
+    );
   }
 }
 

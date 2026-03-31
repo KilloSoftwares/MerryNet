@@ -24,7 +24,7 @@ class ProfileScreen extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.primary.withOpacity(0.3),
+                      color: AppColors.primary.withValues(alpha: 0.3),
                       blurRadius: 16,
                       offset: const Offset(0, 6),
                     ),
@@ -41,7 +41,7 @@ class ProfileScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.success.withOpacity(0.15),
+                  color: AppColors.success.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Text(
@@ -62,7 +62,7 @@ class ProfileScreen extends ConsumerWidget {
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
                 ),
                 child: Column(
                   children: [
@@ -109,7 +109,7 @@ class ProfileScreen extends ConsumerWidget {
               _MenuItem(icon: Icons.info_outline_rounded, label: 'About', onTap: () {}),
               _MenuItem(icon: Icons.logout_rounded, label: 'Logout', onTap: () {}, isDestructive: true),
               const SizedBox(height: 24),
-              Text('Maranet Zero v1.0.0',
+              const Text('Maranet Zero v1.0.0',
                 style: TextStyle(color: AppColors.textMuted, fontSize: 12),
               ),
               const SizedBox(height: 80),
@@ -152,7 +152,7 @@ class _MenuItem extends StatelessWidget {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: (isDestructive ? AppColors.error : AppColors.surfaceLight).withOpacity(isDestructive ? 0.15 : 1),
+            color: (isDestructive ? AppColors.error : AppColors.surfaceLight).withValues(alpha: isDestructive ? 0.15 : 1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(icon, color: iconColor, size: 20),
@@ -173,7 +173,7 @@ class _MenuItem extends StatelessWidget {
             ],
           ],
         ),
-        trailing: trailing ?? Icon(Icons.chevron_right_rounded, color: AppColors.textMuted, size: 22),
+        trailing: trailing ?? const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted, size: 22),
       ),
     );
   }

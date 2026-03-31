@@ -12,9 +12,15 @@ export class ResellerService {
     endpoint?: string;
     location?: string;
     capacity?: number;
-    compensationType?: 'COMMISSION' | 'FREE_NET';
+    compensationType?: 'COMMISSION' | 'FREE_NET' | 'DEVELOPER';
+    freeNetPlanId?: string;
     platform?: string;
+    isDevNode?: boolean;
   }) {
+    if (data.compensationType === 'FREE_NET' && !data.freeNetPlanId) {
+      throw AppError.badRequest('freeNetPlanId is required for FREE_NET compensation type');
+    }
+
     // Check if user already has a reseller account
     const existing = await prisma.reseller.findUnique({ where: { userId } });
     if (existing) {
@@ -42,11 +48,13 @@ export class ResellerService {
         endpoint: data.endpoint,
         location: data.location,
         capacity: data.capacity || 100,
-        compensationType: data.compensationType || 'COMMISSION',
+        compensationType: (data.compensationType || 'COMMISSION') as any,
+        freeNetPlanId: data.freeNetPlanId,
+        isDevNode: data.isDevNode || false,
         assignedSubnet,
         platform: data.platform,
         version: '1.0.0',
-      },
+      } as any,
     });
 
     logger.info(`🖥️ Reseller registered: ${data.deviceId} (${data.platform}), subnet: ${assignedSubnet}`);
@@ -62,7 +70,7 @@ export class ResellerService {
     isOnline: boolean;
     endpoint?: string;
   }) {
-    return prisma.reseller.update({
+    const reseller = await prisma.reseller.update({
       where: { id: resellerId },
       data: {
         activePeers: data.activePeers,
@@ -71,6 +79,14 @@ export class ResellerService {
         ...(data.endpoint && { endpoint: data.endpoint }),
       },
     });
+
+    // Ensure reseller has access if they are online and in a non-commission mode
+    if (reseller.isOnline && (reseller.compensationType === 'FREE_NET' || (reseller.compensationType as any) === 'DEVELOPER')) {
+      const { subscriptionService } = await import('./subscription.service');
+      await subscriptionService.ensureResellerAccess(reseller.id);
+    }
+
+    return reseller;
   }
 
   /**
@@ -182,6 +198,7 @@ export class ResellerService {
         capacity: true,
         activePeers: true,
         platform: true,
+        compensationType: true,
       },
       orderBy: { activePeers: 'asc' },
     });
