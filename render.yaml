@@ -3,16 +3,15 @@ services:
   # Main API Server
   - type: web
     name: merry-net-api
-    env: node
+    env: docker
+    rootDir: main-server
     plan: free
     region: oregon
-    buildCommand: npm install && npm run build
-    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 10000
+        value: 3000
       - key: DATABASE_URL
         fromDatabase:
           name: merry-net-db
@@ -49,19 +48,17 @@ services:
         sync: false
       - key: TWILIO_PHONE_NUMBER
         sync: false
-    healthCheckPath: /api/health
+    healthCheckPath: /api/v1/health
     healthCheckTimeout: 120
     autoDeploy: true
-    pullRequestPreviewsEnabled: true
 
   # Bootstrap API
   - type: web
     name: merry-net-bootstrap
-    env: rust
+    env: docker
+    rootDir: bootstrap-api
     plan: free
     region: oregon
-    buildCommand: cargo build --release
-    startCommand: ./target/release/bootstrap-api
     envVars:
       - key: RUST_LOG
         value: info
@@ -79,55 +76,39 @@ services:
         fromService:
           name: merry-net-api
           property: JWT_SECRET
-    healthCheckPath: /health
-    healthCheckTimeout: 60
     autoDeploy: true
 
   # Gateway Service
   - type: web
     name: merry-net-gateway
-    env: go
+    env: docker
+    rootDir: gateway-service
     plan: free
     region: oregon
-    buildCommand: go build -o gateway ./cmd/gateway
-    startCommand: ./gateway
     envVars:
       - key: LOG_LEVEL
         value: info
-      - key: PORT
-        value: 8081
-      - key: DATABASE_URL
-        fromDatabase:
-          name: merry-net-db
-          property: connectionString
-      - key: REDIS_URL
-        fromDatabase:
-          name: merry-net-redis
-          property: connectionString
-      - key: JWT_SECRET
-        fromService:
-          name: merry-net-api
-          property: JWT_SECRET
-      - key: NAT_PORT_RANGE_START
-        value: 40000
-      - key: NAT_PORT_RANGE_END
-        value: 50000
-      - key: WIREGUARD_INTERFACE
-        value: wg0
-      - key: WIREGUARD_PORT
+      - key: GRPC_PORT
+        value: 50052
+      - key: WG_LISTEN_PORT
         value: 51820
-    healthCheckPath: /health
-    healthCheckTimeout: 60
+      - key: WG_INTERFACE
+        value: wg0
+      - key: WG_ADDRESS
+        value: 10.0.0.1/16
+      - key: NAT_EXTERNAL_INTERFACE
+        value: eth0
+      - key: NAT_INTERNAL_SUBNET
+        value: 10.0.0.0/16
     autoDeploy: true
 
   # Reseller Agent
   - type: web
     name: merry-net-reseller
-    env: go
+    env: docker
+    rootDir: reseller-agent
     plan: free
     region: oregon
-    buildCommand: go build -o reseller ./cmd/agent
-    startCommand: ./reseller
     envVars:
       - key: LOG_LEVEL
         value: info
@@ -152,31 +133,7 @@ services:
       - key: MAIN_SERVER_PUBLIC_KEY
         sync: false
       - key: GRPC_SERVER_URL
-        value: merry-net-api.onrender.com:10000
-      - key: WIREGUARD_CONFIG_PATH
-        value: /app/wireguard
-    healthCheckPath: /health
-    healthCheckTimeout: 60
-    autoDeploy: true
-
-  # Monitoring Services
-  - type: web
-    name: merry-net-monitoring
-    env: docker
-    plan: free
-    region: oregon
-    dockerfilePath: monitoring/Dockerfile
-    envVars:
-      - key: PROMETHEUS_URL
-        value: http://merry-net-api.onrender.com:9090
-      - key: GRAFANA_URL
-        value: http://merry-net-api.onrender.com:3000
-      - key: REDIS_URL
-        fromDatabase:
-          name: merry-net-redis
-          property: connectionString
-    healthCheckPath: /health
-    healthCheckTimeout: 60
+        value: merry-net-api.onrender.com:50051
     autoDeploy: true
 
 databases:

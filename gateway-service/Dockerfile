@@ -2,12 +2,18 @@ FROM golang:1.24-alpine AS builder
 
 RUN apk add --no-cache git gcc musl-dev linux-headers
 
-WORKDIR /app
+# Create the directory structure that matches the go.mod replace directives
+WORKDIR /go/src/github.com/KilloSoftwares/MerryNet
 
-COPY go.mod go.sum* ./
+# Copy skyos modules first (for replace directives)
+COPY skyos ./skyos
+
+# Copy gateway-service files
+COPY gateway-service/go.mod gateway-service/go.sum* ./gateway-service/
+WORKDIR /go/src/github.com/KilloSoftwares/MerryNet/gateway-service
 RUN go mod download
 
-COPY . .
+COPY gateway-service ./
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /gateway ./cmd/gateway
 
 FROM alpine:3.19

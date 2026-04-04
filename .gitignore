@@ -62,3 +62,6 @@ bootstrap-api/target/
 *.key
 !*.key.example
 .codebuddy
+
+# AI Assistant
+.kilocode/

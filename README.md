@@ -45,6 +45,8 @@ Maranet Zero enables end users in Kenya to purchase affordable internet access v
 
 ### Development Setup
 
+> ⚠️ **Important:** Before starting, configure your environment variables. See [ENV_SETUP_GUIDE.md](ENV_SETUP_GUIDE.md) for detailed instructions.
+
 ```bash
 # Clone the repo
 git clone https://github.com/maranet/MerryNet.git
@@ -55,8 +57,13 @@ chmod +x scripts/setup.sh
 ./scripts/setup.sh
 
 # Option 2: Manual setup
+# 1. Configure environment variables (REQUIRED)
+cp .env.example .env          # Root .env for Docker Compose
+cp main-server/.env.example main-server/.env  # Main server .env
+# Edit .env files with your credentials
+
+# 2. Start development
 cd main-server
-cp .env.example .env
 npm install
 npx prisma generate
 npx prisma migrate deploy

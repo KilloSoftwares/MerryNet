@@ -11,9 +11,9 @@ services:
     container_name: maranet-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: maranet
-      POSTGRES_USER: maranet
-      POSTGRES_PASSWORD: maranet_secret
+      POSTGRES_DB: ${POSTGRES_DB:-maranet}
+      POSTGRES_USER: ${POSTGRES_USER:-maranet}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-maranet_secret}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -51,8 +51,8 @@ services:
   # ============================================================
   main-server:
     build:
-      context: ../main-server
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: main-server/Dockerfile
     container_name: maranet-api
     restart: unless-stopped
     depends_on:
@@ -64,7 +64,7 @@ services:
       NODE_ENV: production
       PORT: 3000
       HOST: 0.0.0.0
-      DATABASE_URL: postgresql://maranet:maranet_secret@postgres:5432/maranet?schema=public
+      DATABASE_URL: postgresql://${POSTGRES_USER:-maranet}:${POSTGRES_PASSWORD:-maranet_secret}@postgres:5432/${POSTGRES_DB:-maranet}?schema=public
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET:-change-this-in-production-to-a-random-secret}
       JWT_EXPIRES_IN: 7d
@@ -112,8 +112,8 @@ services:
   # ============================================================
   gateway:
     build:
-      context: ../gateway-service
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: gateway-service/Dockerfile
     container_name: maranet-gateway
     restart: unless-stopped
     cap_add:

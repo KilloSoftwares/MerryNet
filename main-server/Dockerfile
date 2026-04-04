@@ -1,21 +1,21 @@
-FROM node:20-alpine AS base
+FROM node:20-bookworm-slim AS base
 WORKDIR /app
 
 # Install dependencies
-COPY package.json package-lock.json* ./
+COPY main-server/package.json main-server/package-lock.json* ./
 RUN npm ci --only=production && npm cache clean --force
 
 # Build stage
 FROM base AS build
 RUN npm ci
-COPY tsconfig.json ./
-COPY prisma ./prisma
-COPY src ./src
+COPY main-server/tsconfig.json ./
+COPY main-server/prisma ./prisma
+COPY main-server/src ./src
 RUN npx prisma generate
 RUN npm run build
 
 # Production stage
-FROM node:20-alpine AS production
+FROM node:20-bookworm-slim AS production
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -24,12 +24,15 @@ ENV NODE_ENV=production
 COPY --from=base /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
-COPY package.json ./
-COPY prisma ./prisma
+COPY main-server/package.json ./
+COPY main-server/prisma ./prisma
+COPY proto ./proto
+COPY proto /proto
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S maranet -u 1001 -G nodejs
+# Create logs directory and non-root user
+RUN mkdir -p logs && \
+    useradd -r -u 1001 maranet && \
+    chown -R maranet:maranet /app
 
 USER maranet
 
