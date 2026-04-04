@@ -1,4 +1,5 @@
 # render.yaml
+blueprintName: merry-net-prod
 services:
   # Main API Server
   - type: web
