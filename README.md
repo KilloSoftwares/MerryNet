@@ -86,12 +86,81 @@ docker compose up -d
 
 ---
 
+## Building Components Separately
+
+You can build the OS, SDK, and App components separately using either the Makefile or the dedicated build script.
+
+### Using the Build Script (Recommended)
+
+```bash
+# Build all components (OS + SDK + App)
+./scripts/build-components.sh all
+
+# Build only Sky OS (kernel + services)
+./scripts/build-components.sh os
+
+# Setup Android SDK
+./scripts/build-components.sh sdk
+
+# Build Mobile App
+./scripts/build-components.sh app apk    # Android APK
+./scripts/build-components.sh app ios    # iOS app
+./scripts/build-components.sh app web    # Web app
+
+# Clean build artifacts
+./scripts/build-components.sh clean
+```
+
+### Using Makefile
+
+```bash
+# Build all components
+make build-all
+
+# Build individual components
+make build-os           # Build Sky OS (kernel + services)
+make build-os-core      # Build only the kernel
+make build-os-services  # Build only the services
+make build-sdk          # Setup Android SDK
+make build-mobile       # Build Android APK
+make build-mobile-ios   # Build iOS app
+make build-mobile-web   # Build web app
+```
+
+### Component Output Locations
+
+| Component | Output Location |
+|-----------|----------------|
+| Sky OS Kernel | `bin/skyos-kernel` |
+| Sky OS Services | `bin/skyos-services` |
+| Android SDK | `android-sdk/cmdline-tools/` |
+| Mobile App (APK) | `mobile-app/build/outputs/apk/release/app-release.apk` |
+| Mobile App (iOS) | `mobile-app/build/ios/iphoneos/Runner.app` |
+| Mobile App (Web) | `mobile-app/build/web/` |
+
+---
+
 ## Project Structure
 
 ```
 MerryNet/
 ├── proto/                    # Shared protobuf definitions
 │   └── maranet.proto
+├── skyos/                    # Sky OS - Microkernel-based OS architecture
+│   ├── core/                 # Kernel core (Go)
+│   │   ├── kernel.go         # Microkernel implementation
+│   │   └── go.mod
+│   └── services/             # OS services (Go)
+│       ├── monitoring.go     # System monitoring service
+│       ├── network.go        # Network management service
+│       ├── security.go       # Security service
+│       ├── vpn.go            # VPN service
+│       └── go.mod
+├── android-sdk/              # Android SDK cmdline-tools
+│   └── cmdline-tools/
+│       └── latest/           # Android SDK tools
+│           ├── bin/          # SDK executables (sdkmanager, avdmanager, etc.)
+│           └── lib/          # SDK libraries
 ├── main-server/              # Node.js API server
 │   ├── prisma/               # Database schema & migrations
 │   ├── src/
@@ -154,9 +223,11 @@ MerryNet/
 │   ├── API.md                # REST API documentation
 │   └── RESELLER_SETUP.md     # Reseller onboarding guide
 ├── scripts/
-│   └── setup.sh              # Development setup
+│   ├── setup.sh              # Development setup
+│   └── build-components.sh   # Build OS, SDK, and App separately
 ├── .github/workflows/
 │   └── ci.yml                # CI/CD pipeline
+├── Makefile                  # Build targets for all components
 └── README.md
 ```
 

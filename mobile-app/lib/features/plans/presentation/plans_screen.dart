@@ -14,56 +14,105 @@ class PlansScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Choose Plan', style: Theme.of(context).textTheme.displayMedium),
+              Text('Choose Plan',
+                  style: Theme.of(context).textTheme.displayMedium),
               const SizedBox(height: 4),
               Text(
                 'Unlimited data, pay only for time',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppColors.textMuted),
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyLarge
+                    ?.copyWith(color: AppColors.textMuted),
               ),
               const SizedBox(height: 24),
-
-              _PlanCard(
-                planId: 'hourly',
-                name: 'Hourly',
-                duration: '1 Hour',
+              const _PlanCard(
+                planId: 'wifi_2h',
+                name: '2 Hours WiFi',
+                duration: '2 Hours',
                 price: 10,
                 icon: Icons.flash_on_rounded,
-                color: const Color(0xFF00D9FF),
-                features: ['Unlimited data', 'All sites accessible', 'Fast speeds'],
+                color: Color(0xFF00D9FF),
+                features: [
+                  'Unlimited data',
+                  'All sites accessible',
+                  'Fast speeds'
+                ],
               ),
               const SizedBox(height: 16),
-
-              _PlanCard(
-                planId: 'daily',
-                name: 'Daily',
+              const _PlanCard(
+                planId: 'wifi_3h',
+                name: '3 Hours WiFi',
+                duration: '3 Hours',
+                price: 15,
+                icon: Icons.router_rounded,
+                color: Color(0xFF00E5FF),
+                features: [
+                  'Unlimited data',
+                  'All sites accessible',
+                  'Standard speeds'
+                ],
+              ),
+              const SizedBox(height: 16),
+              const _PlanCard(
+                planId: 'wifi_12h',
+                name: '12 Hours WiFi',
+                duration: '12 Hours',
+                price: 40,
+                icon: Icons.cloud_rounded,
+                color: Color(0xFF0097A7),
+                features: [
+                  'Unlimited data',
+                  'All sites accessible',
+                  'Fast speeds',
+                  'Save 39% vs hourly'
+                ],
+              ),
+              const SizedBox(height: 16),
+              const _PlanCard(
+                planId: 'wifi_1d',
+                name: 'Daily WiFi',
                 duration: '24 Hours',
-                price: 30,
+                price: 80,
                 icon: Icons.wb_sunny_rounded,
-                color: const Color(0xFF6C63FF),
-                features: ['Unlimited data', 'All sites accessible', 'Fast speeds', 'Save 28% vs hourly'],
+                color: Color(0xFF6C63FF),
+                features: [
+                  'Unlimited data',
+                  'All sites accessible',
+                  'Fast speeds',
+                  'Save 50% vs 12h'
+                ],
                 isPopular: true,
               ),
               const SizedBox(height: 16),
-
-              _PlanCard(
-                planId: 'weekly',
-                name: 'Weekly',
+              const _PlanCard(
+                planId: 'wifi_1w',
+                name: 'Weekly WiFi',
                 duration: '7 Days',
-                price: 150,
+                price: 350,
                 icon: Icons.calendar_today_rounded,
-                color: const Color(0xFF00E676),
-                features: ['Unlimited data', 'All sites accessible', 'Fast speeds', 'Save 29% vs daily'],
+                color: Color(0xFF00E676),
+                features: [
+                  'Unlimited data',
+                  'All sites accessible',
+                  'Fast speeds',
+                  'Save 38% vs daily'
+                ],
               ),
               const SizedBox(height: 16),
-
-              _PlanCard(
-                planId: 'monthly',
-                name: 'Monthly',
+              const _PlanCard(
+                planId: 'wifi_1m',
+                name: 'Monthly WiFi',
                 duration: '30 Days',
-                price: 500,
+                price: 700,
                 icon: Icons.star_rounded,
-                color: const Color(0xFFFFAB40),
-                features: ['Unlimited data', 'All sites accessible', 'Fastest speeds', 'Save 44% vs daily', 'Priority support'],
+                color: Color(0xFFFFAB40),
+                features: [
+                  'Unlimited data',
+                  'All sites accessible',
+                  'Fastest speeds',
+                  'Save 33% vs weekly',
+                  'Priority support'
+                ],
                 isBestValue: true,
               ),
               const SizedBox(height: 80),
@@ -140,50 +189,73 @@ class _PlanCard extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          Text(name, style: const TextStyle(
-                            color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold,
-                          )),
+                          Text(name,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              )),
                           if (isPopular) ...[
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
                                 gradient: AppColors.primaryGradient,
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Text('Popular',
-                                style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600),
+                              child: const Text(
+                                'Popular',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600),
                               ),
                             ),
                           ],
                           if (isBestValue) ...[
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
                                 color: AppColors.warning.withOpacity(0.2),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Text('Best Value',
-                                style: TextStyle(color: AppColors.warning, fontSize: 10, fontWeight: FontWeight.w600),
+                              child: const Text(
+                                'Best Value',
+                                style: TextStyle(
+                                    color: AppColors.warning,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600),
                               ),
                             ),
                           ],
                         ],
                       ),
                       const SizedBox(height: 2),
-                      Text(duration, style: TextStyle(color: AppColors.textMuted, fontSize: 14)),
+                      Text(duration,
+                          style: const TextStyle(
+                              color: AppColors.textMuted, fontSize: 14)),
                     ],
                   ),
                 ),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text('KES',
-                      style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w500),
+                    Text(
+                      'KES',
+                      style: TextStyle(
+                          color: color,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500),
                     ),
-                    Text('$price',
-                      style: TextStyle(color: color, fontSize: 28, fontWeight: FontWeight.bold),
+                    Text(
+                      '$price',
+                      style: TextStyle(
+                          color: color,
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -195,16 +267,22 @@ class _PlanCard extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(
-              children: features.map((f) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  children: [
-                    Icon(Icons.check_circle_rounded, color: color, size: 18),
-                    const SizedBox(width: 8),
-                    Text(f, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                  ],
-                ),
-              )).toList(),
+              children: features
+                  .map((f) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          children: [
+                            Icon(Icons.check_circle_rounded,
+                                color: color, size: 18),
+                            const SizedBox(width: 8),
+                            Text(f,
+                                style: const TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 13)),
+                          ],
+                        ),
+                      ))
+                  .toList(),
             ),
           ),
           const SizedBox(height: 16),
@@ -221,9 +299,11 @@ class _PlanCard extends StatelessWidget {
                   backgroundColor: color.withOpacity(0.15),
                   foregroundColor: color,
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
-                child: Text('Buy $name — KES $price',
+                child: Text(
+                  'Buy $name — KES $price',
                   style: TextStyle(fontWeight: FontWeight.w600, color: color),
                 ),
               ),
@@ -257,9 +337,12 @@ class _PlanCard extends StatelessWidget {
             const SizedBox(height: 24),
             Icon(icon, color: color, size: 48),
             const SizedBox(height: 16),
-            Text('$name Bundle', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            Text('$name Bundle',
+                style:
+                    const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
-            Text('Unlimited internet for $duration', style: const TextStyle(color: AppColors.textMuted)),
+            Text('Unlimited internet for $duration',
+                style: const TextStyle(color: AppColors.textMuted)),
             const SizedBox(height: 20),
             Container(
               padding: const EdgeInsets.all(16),
@@ -271,7 +354,11 @@ class _PlanCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text('Total', style: TextStyle(fontSize: 16)),
-                  Text('KES $price', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: color)),
+                  Text('KES $price',
+                      style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: color)),
                 ],
               ),
             ),
@@ -281,18 +368,23 @@ class _PlanCard extends StatelessWidget {
               height: 56,
               child: Container(
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [color, color.withOpacity(0.8)]),
+                  gradient:
+                      LinearGradient(colors: [color, color.withOpacity(0.8)]),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: ElevatedButton.icon(
                   onPressed: () {
                     Navigator.pop(ctx);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('📱 Check your phone for M-Pesa prompt')),
+                      const SnackBar(
+                          content:
+                              Text('📱 Check your phone for M-Pesa prompt')),
                     );
                   },
                   icon: const Icon(Icons.phone_android_rounded),
-                  label: const Text('Pay with M-Pesa', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  label: const Text('Pay with M-Pesa',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.transparent,
                     shadowColor: Colors.transparent,

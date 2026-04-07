@@ -30,15 +30,20 @@ class Plan {
       description: json['description'] as String? ?? '',
       price: (json['price'] as num).toDouble(),
       currency: json['currency'] as String? ?? 'KES',
-      durationHours: json['durationHours'] as int? ?? json['duration_hours'] as int? ?? 0,
+      durationHours:
+          json['durationHours'] as int? ?? json['duration_hours'] as int? ?? 0,
     );
   }
 
   String get durationLabel {
     if (durationHours <= 1) return '1 Hour';
-    if (durationHours <= 24) return '24 Hours';
-    if (durationHours <= 168) return '7 Days';
-    return '30 Days';
+    if (durationHours == 2) return '2 Hours';
+    if (durationHours == 3) return '3 Hours';
+    if (durationHours == 12) return '12 Hours';
+    if (durationHours == 24) return '24 Hours';
+    if (durationHours == 168) return '7 Days';
+    if (durationHours >= 720) return '30 Days';
+    return '$durationHours Hours';
   }
 }
 
@@ -65,10 +70,15 @@ class Subscription {
     return Subscription(
       id: json['id'] as String,
       planId: json['planId'] as String? ?? json['plan_id'] as String? ?? '',
-      startTime: DateTime.parse(json['startTime'] ?? json['start_time'] ?? DateTime.now().toIso8601String()),
-      endTime: DateTime.parse(json['endTime'] ?? json['end_time'] ?? DateTime.now().toIso8601String()),
+      startTime: DateTime.parse(json['startTime'] ??
+          json['start_time'] ??
+          DateTime.now().toIso8601String()),
+      endTime: DateTime.parse(json['endTime'] ??
+          json['end_time'] ??
+          DateTime.now().toIso8601String()),
       status: json['status'] as String? ?? 'ACTIVE',
-      autoRenew: json['autoRenew'] as bool? ?? json['auto_renew'] as bool? ?? false,
+      autoRenew:
+          json['autoRenew'] as bool? ?? json['auto_renew'] as bool? ?? false,
       plan: json['plan'] != null ? Plan.fromJson(json['plan']) : null,
     );
   }
@@ -205,7 +215,8 @@ class PaymentService {
     return response.data['data'];
   }
 
-  Future<List<Map<String, dynamic>>> getTransactions({int page = 1, int limit = 20}) async {
+  Future<List<Map<String, dynamic>>> getTransactions(
+      {int page = 1, int limit = 20}) async {
     final response = await _dio.get('/payments/transactions', queryParameters: {
       'page': page,
       'limit': limit,

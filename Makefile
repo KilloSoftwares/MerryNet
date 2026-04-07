@@ -36,12 +36,58 @@ build-bootstrap:
 	@echo "=> Building Bootstrap API (Rust)..."
 	cd bootstrap-api && cargo build --release
 
+# ============================================================
+# 2.2 Mobile App Build Targets
+# ============================================================
 build-mobile:
 	@echo "=> Building Mobile App (Flutter APK)..."
 	cd mobile-app && flutter build apk
 
+build-mobile-ios:
+	@echo "=> Building Mobile App (Flutter iOS)..."
+	cd mobile-app && flutter build ios
+
+build-mobile-web:
+	@echo "=> Building Mobile App (Flutter Web)..."
+	cd mobile-app && flutter build web
+
 # ============================================================
-# 3. Development / Run Targets
+# 3. Sky OS Build Targets
+# ============================================================
+build-os: build-os-core build-os-services
+
+build-os-core:
+	@echo "=> Building Sky OS Core Kernel..."
+	cd skyos/core && go build -o ../../bin/skyos-kernel .
+
+build-os-services:
+	@echo "=> Building Sky OS Services..."
+	cd skyos/services && go build -o ../../bin/skyos-services .
+
+# ============================================================
+# 4. Android SDK Build Targets
+# ============================================================
+build-sdk:
+	@echo "=> Setting up Android SDK..."
+	@echo "Android SDK cmdline-tools already present in android-sdk/"
+	@echo "To install additional SDK packages, run:"
+	@echo "  ./android-sdk/cmdline-tools/latest/bin/sdkmanager --list"
+
+build-sdk-accept-licenses:
+	@echo "=> Accepting Android SDK licenses..."
+	yes | ./android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
+# ============================================================
+# 5. Build All Components Separately
+# ============================================================
+build-all: build-os build-sdk build-mobile
+	@echo "=> All components built successfully!"
+	@echo "  - Sky OS: bin/skyos-kernel, bin/skyos-services"
+	@echo "  - Android SDK: android-sdk/cmdline-tools/"
+	@echo "  - Mobile App: mobile-app/build/outputs/apk/"
+
+# ============================================================
+# 6. Development / Run Targets
 # ============================================================
 run: run-infra generate-db run-api
 
@@ -62,7 +108,7 @@ run-all-docker:
 	cd deploy && sudo docker compose up --build -d
 
 # ============================================================
-# 4. Database Tools
+# 7. Database Tools
 # ============================================================
 generate-db:
 	@echo "=> Generating Prisma Client & Pushing Schema..."
@@ -77,7 +123,7 @@ studio:
 	cd main-server && npm run db:studio
 
 # ============================================================
-# 5. Utilities
+# 8. Utilities
 # ============================================================
 logs:
 	@echo "=> Tailing Docker logs..."

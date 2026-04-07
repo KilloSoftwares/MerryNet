@@ -89,32 +89,32 @@ class HomeScreen extends ConsumerWidget {
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
               const SizedBox(height: 12),
-              _PlanPreviewCard(
+              const _PlanPreviewCard(
                 title: 'Daily Bundle',
                 subtitle: 'Unlimited internet for 24 hours',
                 price: 'KES 30',
                 icon: Icons.wb_sunny_rounded,
-                gradient: const LinearGradient(
+                gradient: LinearGradient(
                   colors: [Color(0xFF6C63FF), Color(0xFF8B83FF)],
                 ),
               ),
               const SizedBox(height: 12),
-              _PlanPreviewCard(
+              const _PlanPreviewCard(
                 title: 'Weekly Bundle',
                 subtitle: 'Unlimited internet for 7 days',
                 price: 'KES 150',
                 icon: Icons.calendar_today_rounded,
-                gradient: const LinearGradient(
+                gradient: LinearGradient(
                   colors: [Color(0xFF00D9FF), Color(0xFF00E676)],
                 ),
               ),
               const SizedBox(height: 12),
-              _PlanPreviewCard(
+              const _PlanPreviewCard(
                 title: 'Monthly Bundle',
                 subtitle: 'Unlimited internet for 30 days',
                 price: 'KES 500',
                 icon: Icons.star_rounded,
-                gradient: const LinearGradient(
+                gradient: LinearGradient(
                   colors: [Color(0xFFFFAB40), Color(0xFFFF5252)],
                 ),
                 isBestValue: true,
@@ -127,14 +127,14 @@ class HomeScreen extends ConsumerWidget {
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
               const SizedBox(height: 12),
-              Row(
+              const Row(
                 children: [
                   Expanded(child: _StatCard(
                     label: 'Data Used',
                     value: '2.4 GB',
                     icon: Icons.data_usage_rounded,
                   )),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   Expanded(child: _StatCard(
                     label: 'Time Left',
                     value: '18h 32m',
@@ -225,11 +225,11 @@ class _VpnStatusCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _StatusMetric(label: 'Download', value: '45.2 Mbps', icon: Icons.arrow_downward_rounded),
+              const _StatusMetric(label: 'Download', value: '45.2 Mbps', icon: Icons.arrow_downward_rounded),
               Container(width: 1, height: 40, color: AppColors.surfaceLight),
-              _StatusMetric(label: 'Upload', value: '12.8 Mbps', icon: Icons.arrow_upward_rounded),
+              const _StatusMetric(label: 'Upload', value: '12.8 Mbps', icon: Icons.arrow_upward_rounded),
               Container(width: 1, height: 40, color: AppColors.surfaceLight),
-              _StatusMetric(label: 'Ping', value: '24 ms', icon: Icons.speed_rounded),
+              const _StatusMetric(label: 'Ping', value: '24 ms', icon: Icons.speed_rounded),
             ],
           ),
         ],
