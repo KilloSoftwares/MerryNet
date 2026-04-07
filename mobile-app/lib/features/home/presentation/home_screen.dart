@@ -90,19 +90,20 @@ class HomeScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
               const _PlanPreviewCard(
-                title: 'Daily Bundle',
+                title: 'Daily WiFi',
                 subtitle: 'Unlimited internet for 24 hours',
-                price: 'KES 30',
+                price: 'KES 80',
                 icon: Icons.wb_sunny_rounded,
                 gradient: LinearGradient(
                   colors: [Color(0xFF6C63FF), Color(0xFF8B83FF)],
                 ),
+                isPopular: true,
               ),
               const SizedBox(height: 12),
               const _PlanPreviewCard(
-                title: 'Weekly Bundle',
+                title: 'Weekly WiFi',
                 subtitle: 'Unlimited internet for 7 days',
-                price: 'KES 150',
+                price: 'KES 350',
                 icon: Icons.calendar_today_rounded,
                 gradient: LinearGradient(
                   colors: [Color(0xFF00D9FF), Color(0xFF00E676)],
@@ -110,9 +111,9 @@ class HomeScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
               const _PlanPreviewCard(
-                title: 'Monthly Bundle',
+                title: 'Monthly WiFi',
                 subtitle: 'Unlimited internet for 30 days',
-                price: 'KES 500',
+                price: 'KES 700',
                 icon: Icons.star_rounded,
                 gradient: LinearGradient(
                   colors: [Color(0xFFFFAB40), Color(0xFFFF5252)],
@@ -305,6 +306,7 @@ class _PlanPreviewCard extends StatelessWidget {
   final IconData icon;
   final Gradient gradient;
   final bool isBestValue;
+  final bool isPopular;
 
   const _PlanPreviewCard({
     required this.title,
@@ -313,6 +315,7 @@ class _PlanPreviewCard extends StatelessWidget {
     required this.icon,
     required this.gradient,
     this.isBestValue = false,
+    this.isPopular = false,
   });
 
   @override
@@ -322,8 +325,8 @@ class _PlanPreviewCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: BorderRadius.circular(16),
-        border: isBestValue
-            ? Border.all(color: AppColors.warning.withOpacity(0.4))
+        border: (isPopular || isBestValue)
+            ? Border.all(color: isPopular ? AppColors.primary.withOpacity(0.4) : AppColors.warning.withOpacity(0.4))
             : null,
       ),
       child: Row(
@@ -345,6 +348,17 @@ class _PlanPreviewCard extends StatelessWidget {
                 Row(
                   children: [
                     Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15)),
+                    if (isPopular) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          gradient: AppColors.primaryGradient,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text('Popular', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600)),
+                      ),
+                    ],
                     if (isBestValue) ...[
                       const SizedBox(width: 8),
                       Container(
