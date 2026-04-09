@@ -9,7 +9,8 @@ rule_files:
 alerting:
   alertmanagers:
     - static_configs:
-        - targets: []
+        - targets: ['alertmanager:9093']
+      timeout: 10s
 
 scrape_configs:
   # Main API Server metrics

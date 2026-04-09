@@ -154,12 +154,12 @@ class _PlanCard extends StatelessWidget {
         color: AppColors.card,
         borderRadius: BorderRadius.circular(20),
         border: (isPopular || isBestValue)
-            ? Border.all(color: color.withOpacity(0.4), width: 1.5)
+            ? Border.all(color: color.withValues(alpha: 0.4), width: 1.5)
             : null,
         boxShadow: (isPopular || isBestValue)
             ? [
                 BoxShadow(
-                  color: color.withOpacity(0.15),
+                  color: color.withValues(alpha: 0.15),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),
@@ -177,7 +177,7 @@ class _PlanCard extends StatelessWidget {
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.15),
+                    color: color.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Icon(icon, color: color, size: 28),
@@ -192,9 +192,10 @@ class _PlanCard extends StatelessWidget {
                           Text(name,
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 20,
+                                fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                              )),
+                              ),
+                              overflow: TextOverflow.ellipsis),
                           if (isPopular) ...[
                             const SizedBox(width: 8),
                             Container(
@@ -219,7 +220,7 @@ class _PlanCard extends StatelessWidget {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
-                                color: AppColors.warning.withOpacity(0.2),
+                                color: AppColors.warning.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: const Text(
@@ -296,7 +297,7 @@ class _PlanCard extends StatelessWidget {
               child: ElevatedButton(
                 onPressed: () => _showPaymentDialog(context),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: color.withOpacity(0.15),
+                  backgroundColor: color.withValues(alpha: 0.15),
                   foregroundColor: color,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
@@ -369,7 +370,7 @@ class _PlanCard extends StatelessWidget {
               child: Container(
                 decoration: BoxDecoration(
                   gradient:
-                      LinearGradient(colors: [color, color.withOpacity(0.8)]),
+                      LinearGradient(colors: [color, color.withValues(alpha: 0.8)]),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: ElevatedButton.icon(

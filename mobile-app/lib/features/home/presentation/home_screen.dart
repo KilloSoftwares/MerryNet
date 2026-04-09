@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../chatbot/presentation/chatbot_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -22,7 +24,7 @@ class HomeScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Welcome back 👋',
+                        'Welcome back ',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                       const SizedBox(height: 4),
@@ -34,14 +36,20 @@ class HomeScreen extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      gradient: AppColors.primaryGradient,
-                      borderRadius: BorderRadius.circular(14),
+                  GestureDetector(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const ChatbotScreen()),
                     ),
-                    child: const Icon(Icons.notifications_rounded, color: Colors.white),
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        gradient: AppColors.primaryGradient,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(Icons.chat_rounded, color: Colors.white),
+                    ),
                   ),
                 ],
               ),
@@ -63,69 +71,96 @@ class HomeScreen extends ConsumerWidget {
                     icon: Icons.flash_on_rounded,
                     label: 'Buy Bundle',
                     color: AppColors.accent,
-                    onTap: () {},
+                    onTap: () => context.push('/plans'),
                   )),
                   const SizedBox(width: 12),
                   Expanded(child: _QuickActionCard(
                     icon: Icons.history_rounded,
                     label: 'History',
                     color: AppColors.primary,
-                    onTap: () {},
+                    onTap: () => _showComingSoon(context),
                   )),
                   const SizedBox(width: 12),
                   Expanded(child: _QuickActionCard(
                     icon: Icons.share_rounded,
                     label: 'Refer',
                     color: AppColors.success,
-                    onTap: () {},
+                    onTap: () => context.push('/profile'),
                   )),
                 ],
               ),
               const SizedBox(height: 24),
 
               // Plans Preview
-              Text(
-                'Popular Plans',
-                style: Theme.of(context).textTheme.headlineMedium,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Popular Plans',
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                  TextButton(
+                    onPressed: () => context.push('/plans'),
+                    child: const Text('View All', style: TextStyle(color: AppColors.accent)),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
-              const _PlanPreviewCard(
-                title: 'Daily WiFi',
-                subtitle: 'Unlimited internet for 24 hours',
-                price: 'KES 80',
-                icon: Icons.wb_sunny_rounded,
-                gradient: LinearGradient(
-                  colors: [Color(0xFF6C63FF), Color(0xFF8B83FF)],
-                ),
-                isPopular: true,
-              ),
-              const SizedBox(height: 12),
-              const _PlanPreviewCard(
-                title: 'Weekly WiFi',
-                subtitle: 'Unlimited internet for 7 days',
-                price: 'KES 350',
-                icon: Icons.calendar_today_rounded,
-                gradient: LinearGradient(
-                  colors: [Color(0xFF00D9FF), Color(0xFF00E676)],
+              GestureDetector(
+                onTap: () => context.push('/plans'),
+                child: const _PlanPreviewCard(
+                  title: 'Daily WiFi',
+                  subtitle: 'Unlimited internet for 24 hours',
+                  price: 'KES 80',
+                  icon: Icons.wb_sunny_rounded,
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF6C63FF), Color(0xFF8B83FF)],
+                  ),
+                  isPopular: true,
                 ),
               ),
               const SizedBox(height: 12),
-              const _PlanPreviewCard(
-                title: 'Monthly WiFi',
-                subtitle: 'Unlimited internet for 30 days',
-                price: 'KES 700',
-                icon: Icons.star_rounded,
-                gradient: LinearGradient(
-                  colors: [Color(0xFFFFAB40), Color(0xFFFF5252)],
+              GestureDetector(
+                onTap: () => context.push('/plans'),
+                child: const _PlanPreviewCard(
+                  title: 'Weekly WiFi',
+                  subtitle: 'Unlimited internet for 7 days',
+                  price: 'KES 350',
+                  icon: Icons.calendar_today_rounded,
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF00D9FF), Color(0xFF00E676)],
+                  ),
                 ),
-                isBestValue: true,
+              ),
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: () => context.push('/plans'),
+                child: const _PlanPreviewCard(
+                  title: 'Monthly WiFi',
+                  subtitle: 'Unlimited internet for 30 days',
+                  price: 'KES 700',
+                  icon: Icons.star_rounded,
+                  gradient: LinearGradient(
+                    colors: [Color(0xFFFFAB40), Color(0xFFFF5252)],
+                  ),
+                  isBestValue: true,
+                ),
               ),
               const SizedBox(height: 24),
 
               // Stats
-              Text(
-                'Your Stats',
-                style: Theme.of(context).textTheme.headlineMedium,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Your Stats',
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                  TextButton(
+                    onPressed: () => _showComingSoon(context),
+                    child: const Text('Details', style: TextStyle(color: AppColors.accent)),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
               const Row(
@@ -166,12 +201,12 @@ class _VpnStatusCard extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: AppColors.primary.withOpacity(0.3),
+          color: AppColors.primary.withValues(alpha: 0.3),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.15),
+            color: AppColors.primary.withValues(alpha: 0.15),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -189,7 +224,7 @@ class _VpnStatusCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.success.withOpacity(0.5),
+                      color: AppColors.success.withValues(alpha: 0.5),
                       blurRadius: 8,
                     ),
                   ],
@@ -197,7 +232,7 @@ class _VpnStatusCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               const Text(
-                'VPN Connected',
+                'Connected',
                 style: TextStyle(
                   color: AppColors.success,
                   fontWeight: FontWeight.w600,
@@ -208,7 +243,7 @@ class _VpnStatusCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: AppColors.success.withOpacity(0.15),
+                  color: AppColors.success.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Text(
@@ -277,7 +312,7 @@ class _QuickActionCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.card,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Column(
           children: [
@@ -285,7 +320,7 @@ class _QuickActionCard extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: color.withOpacity(0.15),
+                color: color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: color, size: 22),
@@ -326,7 +361,7 @@ class _PlanPreviewCard extends StatelessWidget {
         color: AppColors.card,
         borderRadius: BorderRadius.circular(16),
         border: (isPopular || isBestValue)
-            ? Border.all(color: isPopular ? AppColors.primary.withOpacity(0.4) : AppColors.warning.withOpacity(0.4))
+            ? Border.all(color: isPopular ? AppColors.primary.withValues(alpha: 0.4) : AppColors.warning.withValues(alpha: 0.4))
             : null,
       ),
       child: Row(
@@ -364,7 +399,7 @@ class _PlanPreviewCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: AppColors.warning.withOpacity(0.2),
+                          color: AppColors.warning.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Text('Best Value', style: TextStyle(color: AppColors.warning, fontSize: 10, fontWeight: FontWeight.w600)),
@@ -411,4 +446,10 @@ class _StatCard extends StatelessWidget {
       ),
     );
   }
+}
+
+void _showComingSoon(BuildContext context) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text('Coming soon!')),
+  );
 }

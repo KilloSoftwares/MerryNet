@@ -1,0 +1,3211 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OCTOPUS AI — Connectome Intelligence System</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;500;700&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #020b12;
+      --panel-bg: #040f1c;
+      --border: #0c2e45;
+      --border-bright: #0d4a6e;
+      --cyan: #00e5ff;
+      --cyan-dim: #007a99;
+      --amber: #ffaa00;
+      --green: #2dff8a;
+      --red: #ff4d6a;
+      --text: #8ec8df;
+      --text-dim: #2a5a72;
+      --text-bright: #c8eaf5;
+      --node-base: #071824;
+      --node-rim: #0d3d5c;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      display: flex;
+      flex-direction: column;
+      background-image:
+        radial-gradient(ellipse 60% 50% at 30% 50%, rgba(0, 180, 204, 0.035) 0%, transparent 100%),
+        radial-gradient(ellipse 60% 50% at 70% 50%, rgba(0, 100, 180, 0.025) 0%, transparent 100%);
+    }
+
+    /* ── PARTICLE CANVAS ── */
+    #particle-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.4;
+    }
+
+    /* ── HEADER ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 20px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(4, 15, 28, 0.95);
+      flex-shrink: 0;
+      z-index: 100;
+      position: relative;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-glyph {
+      font-size: 32px;
+      line-height: 1;
+      filter: drop-shadow(0 0 8px var(--cyan));
+      animation: bob 4s ease-in-out infinite;
+    }
+
+    @keyframes bob {
+
+      0%,
+      100% {
+        transform: translateY(0)
+      }
+
+      50% {
+        transform: translateY(-2px)
+      }
+    }
+
+    .logo-name {
+      font-family: 'DM Serif Display', serif;
+      font-size: 24px;
+      color: var(--cyan);
+      letter-spacing: 0.08em;
+      text-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
+    }
+
+    .logo-tag {
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 0.2em;
+      margin-top: 1px;
+    }
+
+    .hdr-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 0.12em;
+    }
+
+    .hdr-stat {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 1px;
+    }
+
+    .hdr-stat-val {
+      color: var(--cyan);
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    .hdr-btn {
+      background: rgba(12, 46, 69, 0.3);
+      border: 1px solid var(--border-bright);
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      padding: 8px 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.1em;
+    }
+
+    .hdr-btn:hover {
+      background: rgba(0, 229, 255, 0.1);
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+
+    .og-bar {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .og-pip {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      border: 1px solid currentColor;
+      opacity: 0.3;
+      transition: opacity 0.5s, box-shadow 0.5s;
+    }
+
+    .og-pip.on {
+      opacity: 1;
+      box-shadow: 0 0 6px currentColor;
+    }
+
+    /* ── MAIN LAYOUT ── */
+    .main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── BRAIN PANEL ── */
+    .brain-panel {
+      flex: 0 0 56%;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      position: relative;
+    }
+
+    .brain-header {
+      font-size: 12px;
+      letter-spacing: 0.2em;
+      color: var(--text-dim);
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brain-controls {
+      display: flex;
+      gap: 6px;
+    }
+
+    .brain-ctrl-btn {
+      background: rgba(12, 46, 69, 0.3);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-size: 8px;
+      padding: 3px 8px;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .brain-ctrl-btn:hover {
+      color: var(--cyan);
+      border-color: var(--cyan-dim);
+    }
+
+    .brain-ctrl-btn.active {
+      color: var(--cyan);
+      border-color: var(--cyan);
+      background: rgba(0, 229, 255, 0.1);
+    }
+
+    #svg-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    #brain {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* System filter buttons */
+    .system-filters {
+      display: flex;
+      gap: 4px;
+    }
+
+    .sys-filter {
+      font-size: 10px;
+      padding: 4px 8px;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .sys-filter:hover,
+    .sys-filter.active {
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+
+    /* Lobe tooltip */
+    #lobe-tip {
+      position: absolute;
+      bottom: 12px;
+      left: 14px;
+      font-size: 12px;
+      color: var(--cyan);
+      letter-spacing: 0.1em;
+      max-width: 280px;
+      line-height: 1.6;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      background: rgba(4, 15, 28, 0.95);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 14px;
+    }
+
+    #lobe-tip.show {
+      opacity: 1;
+    }
+
+    #lobe-tip .tip-name {
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    #lobe-tip .tip-desc {
+      color: var(--text-dim);
+    }
+
+    #lobe-tip .tip-system {
+      font-size: 10px;
+      color: var(--amber);
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+    }
+
+    /* ── RIGHT PANEL ── */
+    .right-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Lobe activity log */
+    .activity-panel {
+      flex: 0 0 auto;
+      border-bottom: 1px solid var(--border);
+      max-height: 160px;
+      overflow-y: auto;
+    }
+
+    .activity-header {
+      font-size: 12px;
+      letter-spacing: 0.2em;
+      color: var(--text-dim);
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: var(--panel-bg);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .activity-log {
+      padding: 6px 10px;
+    }
+
+    .activity-item {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(12, 46, 69, 0.4);
+      font-size: 12px;
+      line-height: 1.5;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(4px)
+      }
+
+      to {
+        opacity: 1;
+        transform: none
+      }
+    }
+
+    .act-lobe {
+      color: var(--cyan);
+      min-width: 90px;
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+
+    .act-msg {
+      color: var(--text-dim);
+    }
+
+    .act-msg.done {
+      color: var(--green);
+    }
+
+    .act-msg.thinking {
+      color: var(--amber);
+    }
+
+    .act-msg.error {
+      color: var(--red);
+    }
+
+    /* Memory panel */
+    .memory-panel {
+      flex: 0 0 auto;
+      border-bottom: 1px solid var(--border);
+      max-height: 100px;
+      overflow-y: auto;
+    }
+
+    .memory-header {
+      font-size: 12px;
+      letter-spacing: 0.2em;
+      color: var(--text-dim);
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: var(--panel-bg);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .mem-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .mem-action-btn {
+      font-size: 10px;
+      padding: 3px 7px;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .mem-action-btn:hover {
+      color: var(--amber);
+      border-color: var(--amber);
+    }
+
+    .mem-count {
+      color: var(--amber);
+      font-weight: 500;
+    }
+
+    .memory-items {
+      padding: 6px 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .mem-chip {
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 170, 0, 0.3);
+      color: rgba(255, 170, 0, 0.7);
+      background: rgba(255, 170, 0, 0.05);
+      white-space: nowrap;
+      cursor: default;
+      transition: all 0.2s;
+    }
+
+    .mem-chip:hover {
+      border-color: var(--amber);
+      color: var(--amber);
+      box-shadow: 0 0 8px rgba(255, 170, 0, 0.2);
+    }
+
+    .mem-chip .mem-str {
+      font-size: 7px;
+      opacity: 0.6;
+    }
+
+    /* Chat panel */
+    .chat-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .chat-header {
+      font-size: 12px;
+      letter-spacing: 0.2em;
+      color: var(--text-dim);
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--panel-bg);
+    }
+
+    .chat-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .chat-action-btn {
+      font-size: 10px;
+      padding: 3px 7px;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .chat-action-btn:hover {
+      color: var(--cyan);
+      border-color: var(--cyan-dim);
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      scroll-behavior: smooth;
+    }
+
+    .chat-messages::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .chat-messages::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .chat-messages::-webkit-scrollbar-thumb {
+      background: var(--border-bright);
+      border-radius: 2px;
+    }
+
+    .msg {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      animation: fadeIn 0.3s ease;
+      position: relative;
+    }
+
+    .msg-copy-btn {
+      position: absolute;
+      top: 0;
+      right: 0;
+      font-size: 7px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'JetBrains Mono', monospace;
+      opacity: 0;
+    }
+
+    .msg:hover .msg-copy-btn {
+      opacity: 1;
+    }
+
+    .msg-copy-btn:hover {
+      color: var(--cyan);
+      border-color: var(--cyan);
+    }
+
+    .msg-avatar {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      border: 1px solid;
+      margin-top: 2px;
+    }
+
+    .msg.user .msg-avatar {
+      border-color: var(--text-dim);
+      color: var(--text-dim);
+      background: rgba(46, 100, 130, 0.1);
+    }
+
+    .msg.assistant .msg-avatar {
+      border-color: var(--cyan);
+      color: var(--cyan);
+      background: rgba(0, 229, 255, 0.06);
+      box-shadow: 0 0 8px rgba(0, 229, 255, 0.15);
+    }
+
+    .msg-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .msg-label {
+      font-size: 8px;
+      letter-spacing: 0.15em;
+      color: var(--text-dim);
+      margin-bottom: 4px;
+    }
+
+    .msg-content {
+      font-size: 12px;
+      line-height: 1.7;
+      color: var(--text-bright);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .msg.user .msg-content {
+      color: var(--text);
+    }
+
+    .msg-meta {
+      font-size: 8px;
+      color: var(--text-dim);
+      margin-top: 5px;
+      letter-spacing: 0.05em;
+    }
+
+    .cursor {
+      display: inline-block;
+      width: 7px;
+      height: 12px;
+      background: var(--cyan);
+      animation: blink 0.8s step-end infinite;
+      vertical-align: middle;
+      margin-left: 2px;
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: 0
+      }
+    }
+
+    /* Input area */
+    .input-area {
+      border-top: 1px solid var(--border);
+      padding: 10px 14px;
+      background: rgba(4, 15, 28, 0.8);
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+    }
+
+    #user-input {
+      flex: 1;
+      background: rgba(12, 46, 69, 0.3);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 9px 12px;
+      color: var(--text-bright);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      resize: none;
+      outline: none;
+      transition: border-color 0.2s;
+      max-height: 100px;
+      overflow-y: auto;
+    }
+
+    #user-input:focus {
+      border-color: var(--cyan);
+    }
+
+    #user-input::placeholder {
+      color: var(--text-dim);
+    }
+
+    #send-btn {
+      background: rgba(0, 229, 255, 0.08);
+      border: 1px solid var(--cyan-dim);
+      color: var(--cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      padding: 9px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    #send-btn:hover:not(:disabled) {
+      background: rgba(0, 229, 255, 0.15);
+      border-color: var(--cyan);
+      box-shadow: 0 0 12px rgba(0, 229, 255, 0.2);
+    }
+
+    #send-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* Scrollbars */
+    .activity-panel::-webkit-scrollbar,
+    .memory-panel::-webkit-scrollbar {
+      width: 3px;
+    }
+
+    .activity-panel::-webkit-scrollbar-thumb,
+    .memory-panel::-webkit-scrollbar-thumb {
+      background: var(--border);
+    }
+
+    /* ── MODAL / OVERLAY ── */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(2, 11, 18, 0.85);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    .modal-overlay.show {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 0 40px rgba(0, 229, 255, 0.1);
+    }
+
+    .modal h2 {
+      font-family: 'DM Serif Display', serif;
+      color: var(--cyan);
+      font-size: 18px;
+      margin-bottom: 16px;
+      letter-spacing: 0.05em;
+    }
+
+    .modal-close {
+      float: right;
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 18px;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .modal-close:hover {
+      color: var(--red);
+    }
+
+    .modal-section {
+      margin-bottom: 16px;
+    }
+
+    .modal-section label {
+      display: block;
+      font-size: 9px;
+      letter-spacing: 0.15em;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+
+    .modal-section input,
+    .modal-section textarea,
+    .modal-section select {
+      width: 100%;
+      background: rgba(12, 46, 69, 0.3);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: var(--text-bright);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .modal-section input:focus,
+    .modal-section textarea:focus,
+    .modal-section select:focus {
+      border-color: var(--cyan);
+    }
+
+    .modal-btn {
+      background: rgba(0, 229, 255, 0.1);
+      border: 1px solid var(--cyan-dim);
+      color: var(--cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      padding: 8px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.05em;
+    }
+
+    .modal-btn:hover {
+      background: rgba(0, 229, 255, 0.2);
+      box-shadow: 0 0 12px rgba(0, 229, 255, 0.2);
+    }
+
+    .modal-btn.secondary {
+      background: transparent;
+      border-color: var(--border);
+      color: var(--text-dim);
+    }
+
+    .modal-btn.secondary:hover {
+      border-color: var(--text);
+      color: var(--text);
+    }
+
+    .modal-btn-row {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+
+    /* Stats panel */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .stat-card {
+      background: rgba(12, 46, 69, 0.2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .stat-card .stat-val {
+      font-size: 20px;
+      color: var(--cyan);
+      font-weight: 700;
+    }
+
+    .stat-card .stat-label {
+      font-size: 8px;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    /* Help overlay */
+    .help-content {
+      font-size: 11px;
+      line-height: 1.8;
+      color: var(--text);
+    }
+
+    .help-content h3 {
+      color: var(--cyan);
+      font-size: 13px;
+      margin: 12px 0 6px;
+      font-family: 'DM Serif Display', serif;
+    }
+
+    .help-content ul {
+      padding-left: 16px;
+    }
+
+    .help-content li {
+      margin-bottom: 4px;
+    }
+
+    .help-content code {
+      background: rgba(12, 46, 69, 0.3);
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 10px;
+    }
+
+    /* Notification toast */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 11px;
+      color: var(--text);
+      z-index: 2000;
+      transform: translateX(120%);
+      transition: transform 0.3s ease;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .toast.show {
+      transform: translateX(0);
+    }
+
+    .toast.success {
+      border-color: var(--green);
+    }
+
+    .toast.error {
+      border-color: var(--red);
+    }
+
+    .toast.info {
+      border-color: var(--cyan);
+    }
+
+    /* Algorithm modal */
+    .modal-large {
+      max-width: 900px;
+      max-height: 85vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .algo-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 16px;
+    }
+
+    .algo-filter {
+      font-size: 9px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'JetBrains Mono', monospace;
+      white-space: nowrap;
+    }
+
+    .algo-filter:hover {
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+
+    .algo-filter.active {
+      border-color: var(--cyan);
+      color: var(--cyan);
+      background: rgba(0, 229, 255, 0.08);
+    }
+
+    .algo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 10px;
+      overflow-y: auto;
+      flex: 1;
+      padding-right: 4px;
+      max-height: 50vh;
+    }
+
+    .algo-grid::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .algo-grid::-webkit-scrollbar-thumb {
+      background: var(--border-bright);
+      border-radius: 2px;
+    }
+
+    .algo-card {
+      background: rgba(12, 46, 69, 0.15);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      transition: all 0.2s;
+      cursor: default;
+    }
+
+    .algo-card:hover {
+      border-color: var(--cyan-dim);
+      background: rgba(0, 229, 255, 0.03);
+      transform: translateY(-1px);
+    }
+
+    .algo-card.hidden {
+      display: none;
+    }
+
+    .algo-card-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .algo-num {
+      font-size: 9px;
+      color: var(--text-dim);
+      font-weight: 500;
+      min-width: 20px;
+    }
+
+    .algo-name {
+      font-size: 11px;
+      color: var(--cyan);
+      font-weight: 500;
+      line-height: 1.3;
+    }
+
+    .algo-source {
+      font-size: 8px;
+      color: var(--amber);
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+      line-height: 1.4;
+    }
+
+    .algo-desc {
+      font-size: 10px;
+      color: var(--text-dim);
+      line-height: 1.5;
+      margin-bottom: 6px;
+    }
+
+    .algo-role {
+      font-size: 9px;
+      color: var(--green);
+      line-height: 1.4;
+    }
+
+    .algo-variant {
+      font-size: 8px;
+      color: var(--text-dim);
+      margin-top: 4px;
+      font-style: italic;
+    }
+
+    .algo-group-label {
+      grid-column: 1 / -1;
+      font-size: 9px;
+      color: var(--text-dim);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      padding: 8px 0 4px;
+      border-bottom: 1px solid var(--border);
+      margin-top: 8px;
+    }
+
+    .algo-group-label:first-child {
+      margin-top: 0;
+    }
+
+    /* Live Preview Panel */
+    .preview-panel {
+      border-bottom: 1px solid var(--border);
+      max-height: 200px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .preview-header {
+      font-size: 8px;
+      letter-spacing: 0.2em;
+      color: var(--amber);
+      padding: 5px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 170, 0, 0.05);
+      flex-shrink: 0;
+    }
+
+    .preview-content {
+      flex: 1;
+      overflow: auto;
+      background: #fff;
+      min-height: 80px;
+    }
+
+    .preview-content iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      min-height: 150px;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .main {
+        flex-direction: column;
+      }
+
+      .brain-panel {
+        flex: 0 0 40%;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .hdr-right {
+        gap: 10px;
+      }
+
+      .hdr-stat {
+        font-size: 8px;
+      }
+
+      .modal-large {
+        max-width: 95%;
+        max-height: 90vh;
+      }
+
+      .algo-grid {
+        grid-template-columns: 1fr;
+        max-height: 45vh;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Particle background -->
+  <canvas id="particle-canvas"></canvas>
+
+  <!-- Toast notification -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settings-modal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeSettings()">✕</button>
+      <h2>⚙ System Configuration</h2>
+
+      <div class="modal-section">
+        <label>OpenRouter API Key</label>
+        <input type="password" id="api-key-input" placeholder="sk-or-v1-..." autocomplete="off">
+      </div>
+
+      <div class="modal-section">
+        <label>AI Model (Free Models Available)</label>
+        <select id="model-select">
+          <optgroup label="Free Models">
+            <option value="google/gemma-2-9b-it">Google Gemma 2 9B</option>
+            <option value="meta-llama/llama-3-8b-instruct">Meta Llama 3 8B</option>
+            <option value="mistralai/mistral-7b-instruct">Mistral 7B Instruct</option>
+            <option value="microsoft/phi-3-mini-4k-instruct">Microsoft Phi-3 Mini</option>
+            <option value="openchat/openchat-7b">OpenChat 7B</option>
+            <option value="deepseek/deepseek-chat">DeepSeek Chat</option>
+            <option value="qwen/qwen-2-7b-instruct">Qwen 2 7B Instruct</option>
+            <option value="cognitivecomputations/dolphin-mixtral-8x7b">Dolphin Mixtral 8x7B</option>
+          </optgroup>
+          <optgroup label="Premium Models">
+            <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
+            <option value="anthropic/claude-3-opus">Claude 3 Opus</option>
+            <option value="anthropic/claude-3-haiku">Claude 3 Haiku</option>
+            <option value="openai/gpt-4-turbo">GPT-4 Turbo</option>
+            <option value="openai/gpt-4o">GPT-4o</option>
+            <option value="google/gemini-pro-1.5">Gemini Pro 1.5</option>
+            <option value="meta-llama/llama-3-70b-instruct">Llama 3 70B</option>
+            <option value="mistralai/mistral-large">Mistral Large</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <div class="modal-section">
+        <label>
+          <input type="checkbox" id="sound-toggle" style="width:auto;margin-right:6px">
+          Enable Sound Effects
+        </label>
+      </div>
+
+      <div class="modal-section">
+        <label>
+          <input type="checkbox" id="particles-toggle" style="width:auto;margin-right:6px" checked>
+          Show Particle Effects
+        </label>
+      </div>
+
+      <div class="modal-btn-row">
+        <button class="modal-btn secondary" onclick="closeSettings()">Cancel</button>
+        <button class="modal-btn" onclick="saveSettings()">Save Configuration</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats Modal -->
+  <div class="modal-overlay" id="stats-modal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeStats()">✕</button>
+      <h2>📊 Neural Statistics</h2>
+      <div class="stats-grid" id="stats-grid"></div>
+      <div class="modal-btn-row">
+        <button class="modal-btn secondary" onclick="closeStats()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Help Modal -->
+  <div class="modal-overlay" id="help-modal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeHelp()">✕</button>
+      <h2>🧠 System Manual</h2>
+      <div class="help-content">
+        <h3>Architecture Overview</h3>
+        <p>OCTOPUS AI simulates the <em>Octopus bimaculoides</em> connectome — 25 specialized brain lobes processing
+          your input through a biologically-inspired pipeline.</p>
+
+        <h3>How It Works</h3>
+        <ul>
+          <li><strong>Sensory Lobes</strong> (OL, OLF, TO) classify your input</li>
+          <li><strong>Vertical Lobe</strong> (VL) encodes patterns and retrieves memories</li>
+          <li><strong>Optic Glands</strong> (OG) modulate personality — curiosity & caution</li>
+          <li><strong>Basal Lobes</strong> plan response strategy</li>
+          <li><strong>Subesophageal Mass</strong> synthesizes output</li>
+          <li><strong>Arm Ganglia</strong> handle autonomous parallel processing</li>
+        </ul>
+
+        <h3>Memory System</h3>
+        <p>The Vertical Lobe stores <em>engrams</em> — associative memories that strengthen with repeated themes. Click
+          memory chips to see details.</p>
+
+        <h3>Keyboard Shortcuts</h3>
+        <ul>
+          <li><code>Enter</code> — Send message</li>
+          <li><code>Shift+Enter</code> — New line</li>
+          <li><code>Ctrl+L</code> — Clear conversation</li>
+          <li><code>Ctrl+S</code> — Open settings</li>
+        </ul>
+
+        <h3>Brain Controls</h3>
+        <p>Use the system filter buttons above the brain to highlight specific neural systems (visual, sensory, motor,
+          etc.)</p>
+      </div>
+      <div class="modal-btn-row">
+        <button class="modal-btn secondary" onclick="closeHelp()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Algorithms Modal -->
+  <div class="modal-overlay" id="algorithms-modal">
+    <div class="modal modal-large">
+      <button class="modal-close" onclick="closeAlgorithms()">✕</button>
+      <h2>🧬 Animal-Inspired AI Algorithms</h2>
+      <p style="font-size:10px;color:var(--text-dim);margin-bottom:16px;line-height:1.6">
+        45 algorithms across 13 animal groups — each with a distinct role in building super-intelligent chatbots.
+        Every weakness in one is covered by a strength in another.
+      </p>
+      <div class="algo-filters">
+        <button class="algo-filter active" data-group="all" onclick="filterAlgorithms('all',this)">🔥 CHIMERA
+          MODE</button>
+        <button class="algo-filter" data-group="primate" onclick="filterAlgorithms('primate',this)">🐒 PRIMATE</button>
+        <button class="algo-filter" data-group="octopus" onclick="filterAlgorithms('octopus',this)">🐙 OCTOPUS</button>
+        <button class="algo-filter" data-group="crow" onclick="filterAlgorithms('crow',this)">🦅 CORVID</button>
+        <button class="algo-filter" data-group="ant" onclick="filterAlgorithms('ant',this)">🐜 ANT/BEE</button>
+        <button class="algo-filter" data-group="wolf" onclick="filterAlgorithms('wolf',this)">🐺 WOLF</button>
+        <button class="algo-filter" data-group="elephant" onclick="filterAlgorithms('elephant',this)">🐘
+          ELEPHANT</button>
+        <button class="algo-filter" data-group="bat" onclick="filterAlgorithms('bat',this)">🦇 BAT</button>
+        <button class="algo-filter" data-group="dolphin" onclick="filterAlgorithms('dolphin',this)">🐬 DOLPHIN</button>
+        <button class="algo-filter" data-group="lizard" onclick="filterAlgorithms('lizard',this)">🦎 LIZARD</button>
+        <button class="algo-filter" data-group="fish" onclick="filterAlgorithms('fish',this)">🐟 FISH</button>
+        <button class="algo-filter" data-group="general" onclick="filterAlgorithms('general',this)">🧠 GENERAL</button>
+      </div>
+      <div class="algo-grid" id="algo-grid"></div>
+      <div class="modal-btn-row">
+        <button class="modal-btn secondary" onclick="closeAlgorithms()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <header>
+    <div class="logo">
+      <div class="logo-glyph">🐙</div>
+      <div>
+        <div class="logo-name">OCTOPUS AI</div>
+        <div class="logo-tag">CONNECTOME INTELLIGENCE SYSTEM · 25 LOBES · PERSISTENT VL MEMORY</div>
+      </div>
+    </div>
+    <div class="hdr-right">
+      <div class="hdr-stat">
+        <div class="hdr-stat-val" id="mem-hdr-count">0</div>
+        <div>VL MEMORIES</div>
+      </div>
+      <div class="hdr-stat">
+        <div style="display:flex;gap:4px;align-items:center">
+          <span style="font-size:9px;margin-right:2px">CURIOSITY</span>
+          <div class="og-bar" id="og-curiosity">
+            <div class="og-pip on" style="color:var(--cyan)"></div>
+            <div class="og-pip" style="color:var(--cyan)"></div>
+            <div class="og-pip" style="color:var(--cyan)"></div>
+            <div class="og-pip" style="color:var(--cyan)"></div>
+            <div class="og-pip" style="color:var(--cyan)"></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:4px;align-items:center;margin-top:3px">
+          <span style="font-size:9px;margin-right:2px">CAUTION&nbsp;&nbsp;</span>
+          <div class="og-bar" id="og-caution">
+            <div class="og-pip on" style="color:var(--amber)"></div>
+            <div class="og-pip" style="color:var(--amber)"></div>
+            <div class="og-pip" style="color:var(--amber)"></div>
+            <div class="og-pip" style="color:var(--amber)"></div>
+            <div class="og-pip" style="color:var(--amber)"></div>
+          </div>
+        </div>
+      </div>
+      <div class="hdr-stat">
+        <div class="hdr-stat-val" id="exchange-count">0</div>
+        <div>EXCHANGES</div>
+      </div>
+      <button class="hdr-btn" onclick="openHelp()">? HELP</button>
+      <button class="hdr-btn" onclick="openStats()">📊 STATS</button>
+      <button class="hdr-btn" onclick="toggleAlgorithmsPanel()" id="algo-toggle-btn">🧬 ALGORITHMS</button>
+      <button class="hdr-btn" onclick="openSettings()">⚙ CONFIG</button>
+    </div>
+  </header>
+
+  <div class="main">
+    <!-- BRAIN -->
+    <div class="brain-panel">
+      <div class="brain-header">
+        <div class="system-filters">
+          <button class="sys-filter active" data-system="all" onclick="filterSystem('all',this)">ALL</button>
+          <button class="sys-filter" data-system="visual" onclick="filterSystem('visual',this)"
+            style="color:#00aaff">VISUAL</button>
+          <button class="sys-filter" data-system="sensory" onclick="filterSystem('sensory',this)"
+            style="color:#00cc66">SENSORY</button>
+          <button class="sys-filter" data-system="learning" onclick="filterSystem('learning',this)"
+            style="color:#cc44ff">LEARNING</button>
+          <button class="sys-filter" data-system="motor" onclick="filterSystem('motor',this)"
+            style="color:#00aa66">MOTOR</button>
+          <button class="sys-filter" data-system="execution" onclick="filterSystem('execution',this)"
+            style="color:#cc2255">EXEC</button>
+          <button class="sys-filter" data-system="hormonal" onclick="filterSystem('hormonal',this)"
+            style="color:#ffaa00">HORMONE</button>
+        </div>
+        <span id="active-lobe-label" style="color:var(--cyan)">IDLE</span>
+      </div>
+      <div id="svg-wrap"><svg id="brain" viewBox="0 0 500 430" xmlns="http://www.w3.org/2000/svg"></svg></div>
+      <div id="lobe-tip">
+        <div class="tip-name" id="tip-name"></div>
+        <div class="tip-desc" id="tip-desc"></div>
+        <div class="tip-system" id="tip-system"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="right-panel">
+      <!-- Activity log -->
+      <div class="activity-panel">
+        <div class="activity-header"><span>LOBE ACTIVITY TRACE</span><span id="pipeline-status"
+            style="color:var(--green)">READY</span></div>
+        <div class="activity-log" id="activity-log">
+          <div class="activity-item"><span class="act-lobe">SYSTEM</span><span class="act-msg done">All 25 lobes
+              initialized. VL memory loaded. OG state calibrated.</span></div>
+        </div>
+      </div>
+
+      <!-- Memory panel -->
+      <div class="memory-panel">
+        <div class="memory-header">
+          <span>VERTICAL LOBE MEMORY (persistent associative store)</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="mem-actions">
+              <button class="mem-action-btn" onclick="exportMemories()" title="Export memories">↓ EXP</button>
+              <button class="mem-action-btn" onclick="importMemories()" title="Import memories">↑ IMP</button>
+              <button class="mem-action-btn" onclick="clearMemories()" title="Clear all memories"
+                style="color:var(--red)">✕</button>
+            </div>
+            <span class="mem-count" id="mem-count-label">0 engrams</span>
+          </div>
+        </div>
+        <div class="memory-items" id="memory-items">
+          <span style="font-size:9px;color:var(--text-dim);padding:4px">No memories stored yet. Begin a conversation to
+            populate the VL.</span>
+        </div>
+      </div>
+
+      <!-- Chat -->
+      <div class="chat-panel">
+        <div class="chat-header">
+          <span>NEURAL DIALOGUE CHANNEL</span>
+          <div class="chat-actions">
+            <button class="chat-action-btn" onclick="togglePreview()" title="Toggle HTML Preview"
+              id="preview-toggle-btn">👁 PREVIEW</button>
+            <button class="chat-action-btn" onclick="clearChat()" title="Clear conversation">CLEAR</button>
+          </div>
+        </div>
+        <div class="preview-panel" id="preview-panel" style="display:none">
+          <div class="preview-header">
+            <span>🔮 LIVE HTML PREVIEW</span>
+            <button class="chat-action-btn" onclick="togglePreview()" title="Close preview">✕</button>
+          </div>
+          <div class="preview-content" id="preview-content">
+            <span style="font-size:9px;color:var(--text-dim);padding:12px;display:block;text-align:center">
+              HTML code blocks will be rendered here in real-time...
+            </span>
+          </div>
+        </div>
+        <div class="chat-messages" id="chat-messages">
+          <div class="msg assistant">
+            <div class="msg-avatar">🧠</div>
+            <div class="msg-body">
+              <div class="msg-label">OCTOPUS AI · ALL LOBES ONLINE</div>
+              <div class="msg-content">Connectome initialized. I am a distributed intelligence system modeled on the
+                Octopus bimaculoides brain architecture.
+
+                My processing pipeline routes your input through specialized lobes — sensory classification, vertical
+                lobe encoding, basal motor planning, and subesophageal synthesis. I maintain a persistent associative
+                memory that strengthens with repeated themes, and my optic gland state evolves with our conversation.
+
+                Ask me anything. I learn as we talk.</div>
+            </div>
+          </div>
+        </div>
+        <div class="input-area">
+          <textarea id="user-input" rows="1" placeholder="Send a signal to the connectome..."></textarea>
+          <button id="send-btn" onclick="handleSubmit()">TRANSMIT →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ═══════════════════════════════════════════════════════════
+    // LOBE DEFINITIONS — 25 lobes with 2D positions
+    // ═══════════════════════════════════════════════════════════
+    const LOBES = {
+      OL_L: { x: 62, y: 200, r: 26, label: 'OL_L', name: 'Left Optic Lobe', desc: 'Visual cortex equivalent. Processes left visual field, edge detection, motion, luminance.', color: '#005577', glow: '#00aaff', system: 'visual' },
+      OL_R: { x: 438, y: 200, r: 26, label: 'OL_R', name: 'Right Optic Lobe', desc: 'Mirror of left optic lobe. Together they process 340° visual field via pupil slit optics.', color: '#005577', glow: '#00aaff', system: 'visual' },
+      OLF: { x: 118, y: 142, r: 13, label: 'OLF', name: 'Olfactory Lobe', desc: 'Chemical detection. Identifies amino acids (prey), bile salts (predators), pheromones (mates).', color: '#004422', glow: '#00cc66', system: 'sensory' },
+      TO: { x: 250, y: 75, r: 14, label: 'TO', name: 'Touch/Optic Lobe', desc: 'Multimodal sensory integration. Processes touch, proprioception, and visual flow simultaneously.', color: '#004422', glow: '#00cc66', system: 'sensory' },
+      ST: { x: 382, y: 142, r: 13, label: 'ST', name: 'Statocyst', desc: 'Vestibular system. Gravity vector, linear acceleration, angular velocity — keeps the octopus oriented.', color: '#003344', glow: '#0099cc', system: 'balance' },
+      SL: { x: 188, y: 145, r: 15, label: 'SL', name: 'Superior Frontal', desc: 'Pattern preprocessor. Extracts features from optic lobe, applies noise filtering before VL encoding.', color: '#330066', glow: '#aa44ff', system: 'learning' },
+      VL: { x: 250, y: 118, r: 18, label: 'VL', name: 'Vertical Lobe', desc: 'The learning core. 25M neurons. Fan-out creates sparse high-dimensional encodings; Hebbian plasticity stores associations.', color: '#440088', glow: '#cc44ff', system: 'learning' },
+      SFL: { x: 312, y: 145, r: 15, label: 'SFL', name: 'Subfrontal Lobe', desc: 'Associative memory output. Links learned patterns to motor decisions. Lesion this and learning stops.', color: '#330066', glow: '#aa44ff', system: 'learning' },
+      AN: { x: 188, y: 228, r: 14, label: 'AN', name: 'Anterior Basal', desc: 'Goal-directed arm trajectory planning. Coordinates approach vectors for reach-and-grasp.', color: '#003322', glow: '#00aa66', system: 'motor' },
+      MN: { x: 250, y: 232, r: 14, label: 'MN', name: 'Median Basal', desc: 'Postural maintenance hub. Integrates balance from statocyst with body orientation commands.', color: '#003322', glow: '#00aa66', system: 'motor' },
+      LN: { x: 312, y: 228, r: 14, label: 'LN', name: 'Lateral Basal', desc: 'Lateralized movement decisions. Controls turning, left/right arm deployment asymmetry.', color: '#003322', glow: '#00aa66', system: 'motor' },
+      PN: { x: 250, y: 272, r: 13, label: 'PN', name: 'Posterior Basal', desc: 'Sequential motor planning. Chains multi-step actions — approach, grasp, manipulate, retreat.', color: '#003322', glow: '#00aa66', system: 'motor' },
+      PED_L: { x: 155, y: 278, r: 11, label: 'PED_L', name: 'Left Peduncle', desc: 'Balance-to-motor relay. Converts statocyst signals into corrective arm commands.', color: '#002244', glow: '#0066bb', system: 'balance' },
+      PED_R: { x: 345, y: 278, r: 11, label: 'PED_R', name: 'Right Peduncle', desc: 'Right-side balance relay. Works in opposition to left peduncle to maintain trim.', color: '#002244', glow: '#0066bb', system: 'balance' },
+      SUB_A: { x: 192, y: 322, r: 15, label: 'SUB_A', name: 'Subesophageal Ant.', desc: 'Motor execution for arms 1-4. Translates high-level plans into precise muscle activation patterns.', color: '#330022', glow: '#cc2255', system: 'execution' },
+      SUB_M: { x: 250, y: 332, r: 15, label: 'SUB_M', name: 'Subesophageal Mid.', desc: 'Motor execution for arms 5-8. Coordinates bilateral arm symmetry and force modulation.', color: '#330022', glow: '#cc2255', system: 'execution' },
+      SUB_P: { x: 308, y: 322, r: 15, label: 'SUB_P', name: 'Subesophageal Post.', desc: 'Posterior body control. Mantle contraction for jet propulsion, fin oscillation, siphon direction.', color: '#330022', glow: '#cc2255', system: 'execution' },
+      OG_L: { x: 32, y: 252, r: 10, label: 'OG_L', name: 'Left Optic Gland', desc: 'Hormonal modulator. Releases octopamine for risk-taking, senescence factor at reproduction. The personality gland.', color: '#442200', glow: '#ffaa00', system: 'hormonal' },
+      OG_R: { x: 468, y: 252, r: 10, label: 'OG_R', name: 'Right Optic Gland', desc: 'Mirrors left optic gland. Together they modulate curiosity, hunger, reproductive drive.', color: '#442200', glow: '#ffaa00', system: 'hormonal' },
+      BUCC_S: { x: 214, y: 374, r: 11, label: 'BUC_S', name: 'Superior Buccal', desc: 'Jaw and beak control. Manages bite force calculation, prey handling, venom delivery timing.', color: '#221100', glow: '#885500', system: 'feeding' },
+      BUCC_I: { x: 286, y: 374, r: 11, label: 'BUC_I', name: 'Inferior Buccal', desc: 'Feeding coordination. Synchronizes arm pull with beak strike, salivary gland secretion.', color: '#221100', glow: '#885500', system: 'feeding' },
+      FF: { x: 250, y: 298, r: 10, label: 'FF', name: 'Fin Lobe', desc: 'Hydrodynamic control. Oscillates paired fins for precise low-speed maneuvering and hovering.', color: '#002233', glow: '#007799', system: 'motor' },
+      ARM1: { x: 100, y: 390, r: 22, label: 'ARM', name: 'Arm Ganglia (×8)', desc: '50M distributed neurons. Each arm runs autonomous reflexes — touch→grasp, chemosense→lock — without brain permission.', color: '#001a22', glow: '#00cc99', system: 'arm' },
+      ARM2: { x: 250, y: 415, r: 22, label: 'ARM', name: 'Arm Ganglia (×8)', desc: '250 ganglion segments per arm. Segment 1: gross positioning. Segments 2-250: sucker-level haptics and texture analysis.', color: '#001a22', glow: '#00cc99', system: 'arm' },
+      ARM3: { x: 400, y: 390, r: 22, label: 'ARM', name: 'Arm Ganglia (×8)', desc: 'Local reflex arcs operate at 10ms — 20× faster than signals reaching the brain. True decentralized intelligence.', color: '#001a22', glow: '#00cc99', system: 'arm' },
+    };
+
+    const CONNECTIONS = [
+      ['OL_L', 'SL', 0.85], ['OL_R', 'SL', 0.85],
+      ['SL', 'VL', 0.92], ['VL', 'SFL', 0.88], ['SFL', 'VL', 0.75], ['VL', 'SL', 0.70],
+      ['OL_L', 'PN', 0.65], ['OL_R', 'PN', 0.65],
+      ['PN', 'AN', 0.80], ['PN', 'MN', 0.80],
+      ['AN', 'SUB_A', 0.90], ['MN', 'SUB_M', 0.90], ['LN', 'SUB_P', 0.85],
+      ['ST', 'PED_L', 0.70], ['ST', 'PED_R', 0.70],
+      ['PED_L', 'MN', 0.60], ['PED_R', 'MN', 0.60],
+      ['AN', 'MN', 0.70], ['MN', 'LN', 0.70], ['LN', 'PN', 0.65],
+      ['SUB_A', 'BUCC_S', 0.85], ['SUB_M', 'BUCC_I', 0.85], ['BUCC_S', 'BUCC_I', 0.70],
+      ['OLF', 'SL', 0.55], ['OLF', 'SUB_A', 0.60],
+      ['TO', 'AN', 0.75], ['TO', 'SUB_P', 0.80],
+      ['SUB_A', 'SUB_M', 0.80], ['SUB_M', 'SUB_P', 0.80],
+      ['OG_L', 'OL_L', 0.50], ['OG_R', 'OL_R', 0.50],
+      ['OG_L', 'SUB_A', 0.40], ['OG_R', 'SUB_A', 0.40],
+      ['FF', 'SUB_P', 0.70], ['FF', 'PED_L', 0.65], ['FF', 'PED_R', 0.65],
+      ['PED_L', 'AN', 0.55], ['PED_R', 'LN', 0.55],
+      ['SFL', 'AN', 0.65], ['SFL', 'MN', 0.60],
+      ['SUB_A', 'ARM1', 0.95], ['SUB_M', 'ARM2', 0.95], ['SUB_P', 'ARM3', 0.95],
+      ['ARM1', 'ARM2', 0.60], ['ARM2', 'ARM3', 0.60],
+    ];
+
+    // ═══════════════════════════════════════════════════════════
+    // STATE
+    // ═══════════════════════════════════════════════════════════
+    const state = {
+      memories: [],       // VL engrams: {themes, summary, strength, ts}
+      ogState: { curiosity: 0.5, caution: 0.3 },
+      history: [],        // chat history for API
+      exchanges: 0,
+      processing: false,
+      activeLobes: new Set(),
+      totalWords: 0,
+      totalSignals: 0,
+      systemFilter: 'all',
+      soundEnabled: false,
+      particlesEnabled: true,
+      selectedModel: 'claude-sonnet-4-20250514',
+    };
+
+    // ═══════════════════════════════════════════════════════════
+    // STORAGE LAYER (localStorage fallback)
+    // ═══════════════════════════════════════════════════════════
+    window.storage = {
+      async get(key) {
+        try {
+          const v = localStorage.getItem('octo_' + key);
+          return v ? { value: v } : null;
+        } catch (e) { return null; }
+      },
+      async set(key, value) {
+        try { localStorage.setItem('octo_' + key, value); } catch (e) { }
+      },
+      async remove(key) {
+        try { localStorage.removeItem('octo_' + key); } catch (e) { }
+      }
+    };
+
+    // ═══════════════════════════════════════════════════════════
+    // PARTICLE SYSTEM
+    // ═══════════════════════════════════════════════════════════
+    const particleCanvas = document.getElementById('particle-canvas');
+    const pCtx = particleCanvas.getContext('2d');
+    let particles = [];
+
+    function resizeParticleCanvas() {
+      particleCanvas.width = window.innerWidth;
+      particleCanvas.height = window.innerHeight;
+    }
+
+    function initParticles() {
+      particles = [];
+      for (let i = 0; i < 60; i++) {
+        particles.push({
+          x: Math.random() * particleCanvas.width,
+          y: Math.random() * particleCanvas.height,
+          vx: (Math.random() - 0.5) * 0.3,
+          vy: (Math.random() - 0.5) * 0.3,
+          r: Math.random() * 1.5 + 0.5,
+          alpha: Math.random() * 0.3 + 0.1,
+          color: ['#00e5ff', '#00cc66', '#cc44ff', '#ffaa00'][Math.floor(Math.random() * 4)]
+        });
+      }
+    }
+
+    function animateParticles() {
+      if (!state.particlesEnabled) {
+        pCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+        requestAnimationFrame(animateParticles);
+        return;
+      }
+      pCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+      particles.forEach(p => {
+        p.x += p.vx; p.y += p.vy;
+        if (p.x < 0) p.x = particleCanvas.width;
+        if (p.x > particleCanvas.width) p.x = 0;
+        if (p.y < 0) p.y = particleCanvas.height;
+        if (p.y > particleCanvas.height) p.y = 0;
+        pCtx.beginPath();
+        pCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        pCtx.fillStyle = p.color;
+        pCtx.globalAlpha = p.alpha;
+        pCtx.fill();
+        pCtx.globalAlpha = 1;
+      });
+      // Draw connections between close particles
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 120) {
+            pCtx.beginPath();
+            pCtx.moveTo(particles[i].x, particles[i].y);
+            pCtx.lineTo(particles[j].x, particles[j].y);
+            pCtx.strokeStyle = 'rgba(0,229,255,0.05)';
+            pCtx.lineWidth = 0.5;
+            pCtx.stroke();
+          }
+        }
+      }
+      requestAnimationFrame(animateParticles);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // RENDER BRAIN SVG
+    // ═══════════════════════════════════════════════════════════
+    function renderBrain() {
+      const svg = document.getElementById('brain');
+      svg.innerHTML = '';
+
+      // Defs: glows + pulse + animated glow
+      const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+
+      // Animated pulse filter
+      const animPulse = document.createElementNS('http://www.w3.org/2000/svg', 'filter');
+      animPulse.setAttribute('id', 'glow-pulse-anim');
+      animPulse.innerHTML = `
+    <feGaussianBlur stdDeviation="4" result="blur"/>
+    <feMerge>
+      <feMergeNode in="blur"/>
+      <feMergeNode in="SourceGraphic"/>
+    </feMerge>
+  `;
+      defs.appendChild(animPulse);
+
+      Object.entries(LOBES).forEach(([id, l]) => {
+        const f = document.createElementNS('http://www.w3.org/2000/svg', 'filter');
+        f.setAttribute('id', `glow-${id}`);
+        f.innerHTML = `<feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>`;
+        defs.appendChild(f);
+      });
+      const pf = document.createElementNS('http://www.w3.org/2000/svg', 'filter');
+      pf.setAttribute('id', 'glow-pulse');
+      pf.innerHTML = `<feGaussianBlur stdDeviation="5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>`;
+      defs.appendChild(pf);
+      svg.appendChild(defs);
+
+      // Connections
+      const edgeG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      edgeG.setAttribute('id', 'edges');
+      CONNECTIONS.forEach(([from, to, strength]) => {
+        const a = LOBES[from], b = LOBES[to];
+        if (!a || !b) return;
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', a.x); line.setAttribute('y1', a.y);
+        line.setAttribute('x2', b.x); line.setAttribute('y2', b.y);
+        line.setAttribute('stroke', `rgba(13,58,85,${0.3 + strength * 0.4})`);
+        line.setAttribute('stroke-width', 0.5 + strength);
+        line.setAttribute('id', `edge-${from}-${to}`);
+        edgeG.appendChild(line);
+      });
+      svg.appendChild(edgeG);
+
+      // Nodes
+      const nodeG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      nodeG.setAttribute('id', 'nodes');
+      Object.entries(LOBES).forEach(([id, l]) => {
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('id', `node-${id}`);
+        g.style.cursor = 'pointer';
+        g.setAttribute('data-system', l.system);
+
+        // Outer ring
+        const ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        ring.setAttribute('cx', l.x); ring.setAttribute('cy', l.y); ring.setAttribute('r', l.r + 3);
+        ring.setAttribute('fill', 'none');
+        ring.setAttribute('stroke', `rgba(13,58,85,0.4)`);
+        ring.setAttribute('stroke-width', '0.5');
+        ring.setAttribute('id', `ring-${id}`);
+        g.appendChild(ring);
+
+        // Main circle
+        const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        c.setAttribute('cx', l.x); c.setAttribute('cy', l.y); c.setAttribute('r', l.r);
+        c.setAttribute('fill', l.color);
+        c.setAttribute('stroke', 'rgba(13,58,85,0.6)');
+        c.setAttribute('stroke-width', '1');
+        c.setAttribute('id', `circle-${id}`);
+        g.appendChild(c);
+
+        // Label
+        const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        t.setAttribute('x', l.x); t.setAttribute('y', l.y + 1);
+        t.setAttribute('text-anchor', 'middle');
+        t.setAttribute('dominant-baseline', 'middle');
+        t.setAttribute('fill', 'rgba(100,180,210,0.7)');
+        t.setAttribute('font-family', "'JetBrains Mono',monospace");
+        t.setAttribute('font-size', l.r > 20 ? '7' : '6');
+        t.setAttribute('pointer-events', 'none');
+        t.setAttribute('id', `label-${id}`);
+        t.textContent = l.label;
+        g.appendChild(t);
+
+        g.addEventListener('mouseenter', () => showTip(id));
+        g.addEventListener('mouseleave', hideTip);
+        g.addEventListener('click', () => focusLobe(id));
+        nodeG.appendChild(g);
+      });
+      svg.appendChild(nodeG);
+    }
+
+    function focusLobe(id) {
+      const l = LOBES[id];
+      showToast(`Focused: ${l.name} (${l.system} system)`, 'info');
+      activateLobe(id, l.glow);
+      setTimeout(() => { if (!state.processing) deactivateLobe(id); }, 2000);
+    }
+
+    function showTip(id) {
+      const l = LOBES[id];
+      document.getElementById('tip-name').textContent = l.name;
+      document.getElementById('tip-desc').textContent = l.desc;
+      document.getElementById('tip-system').textContent = `System: ${l.system.toUpperCase()}`;
+      document.getElementById('lobe-tip').classList.add('show');
+    }
+    function hideTip() { document.getElementById('lobe-tip').classList.remove('show'); }
+
+    // ═══════════════════════════════════════════════════════════
+    // SYSTEM FILTER
+    // ═══════════════════════════════════════════════════════════
+    function filterSystem(system, btn) {
+      state.systemFilter = system;
+      document.querySelectorAll('.sys-filter').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+
+      Object.entries(LOBES).forEach(([id, l]) => {
+        const g = document.getElementById(`node-${id}`);
+        if (!g) return;
+        if (system === 'all' || l.system === system) {
+          g.style.opacity = '1';
+        } else {
+          g.style.opacity = '0.15';
+        }
+      });
+
+      // Dim connections for filtered-out lobes
+      CONNECTIONS.forEach(([from, to]) => {
+        const edge = document.getElementById(`edge-${from}-${to}`);
+        if (!edge) return;
+        const fromLobe = LOBES[from], toLobe = LOBES[to];
+        if (system === 'all' || fromLobe.system === system || toLobe.system === system) {
+          edge.style.opacity = '1';
+        } else {
+          edge.style.opacity = '0.1';
+        }
+      });
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // LOBE ANIMATION
+    // ═══════════════════════════════════════════════════════════
+    function activateLobe(id, color) {
+      const l = LOBES[id];
+      if (!l) return;
+      const c = document.getElementById(`circle-${id}`);
+      const r = document.getElementById(`ring-${id}`);
+      const lbl = document.getElementById(`label-${id}`);
+      if (!c) return;
+
+      const glowColor = color || l.glow;
+      c.setAttribute('fill', l.color);
+      c.setAttribute('stroke', glowColor);
+      c.setAttribute('stroke-width', '2.5');
+      c.setAttribute('filter', `url(#glow-${id})`);
+      if (r) { r.setAttribute('stroke', glowColor); r.setAttribute('stroke-width', '1.5'); r.setAttribute('opacity', '0.7'); }
+      if (lbl) { lbl.setAttribute('fill', glowColor); }
+      document.getElementById('active-lobe-label').textContent = l.name.toUpperCase();
+      state.activeLobes.add(id);
+    }
+
+    function deactivateLobe(id) {
+      const l = LOBES[id];
+      if (!l) return;
+      const c = document.getElementById(`circle-${id}`);
+      const r = document.getElementById(`ring-${id}`);
+      const lbl = document.getElementById(`label-${id}`);
+      if (!c) return;
+      c.setAttribute('stroke', 'rgba(13,58,85,0.6)');
+      c.setAttribute('stroke-width', '1');
+      c.setAttribute('filter', '');
+      if (r) { r.setAttribute('stroke', 'rgba(13,58,85,0.4)'); r.setAttribute('stroke-width', '0.5'); }
+      if (lbl) { lbl.setAttribute('fill', 'rgba(100,180,210,0.7)'); }
+      state.activeLobes.delete(id);
+    }
+
+    function fireSignal(fromId, toId, color = '#00e5ff') {
+      const a = LOBES[fromId], b = LOBES[toId];
+      if (!a || !b) return;
+      const svg = document.getElementById('brain');
+      const pulse = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      pulse.setAttribute('r', '4');
+      pulse.setAttribute('fill', color);
+      pulse.setAttribute('filter', 'url(#glow-pulse)');
+      pulse.setAttribute('opacity', '0.9');
+      svg.appendChild(pulse);
+
+      const dur = 400 + Math.random() * 200;
+      const start = performance.now();
+      function animate(now) {
+        const t = Math.min((now - start) / dur, 1);
+        const eased = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+        const x = a.x + (b.x - a.x) * eased;
+        const y = a.y + (b.y - a.y) * eased;
+        pulse.setAttribute('cx', x);
+        pulse.setAttribute('cy', y);
+        pulse.setAttribute('opacity', String(0.9 * (1 - t * 0.3)));
+        if (t < 1) requestAnimationFrame(animate);
+        else { svg.removeChild(pulse); activateLobe(toId, color); state.totalSignals++; }
+      }
+      requestAnimationFrame(animate);
+    }
+
+    async function runSignalWave(lobeSequence, color = '#00e5ff', delayMs = 120) {
+      for (let i = 0; i < lobeSequence.length; i++) {
+        const id = lobeSequence[i];
+        activateLobe(id, color);
+        if (i > 0) fireSignal(lobeSequence[i - 1], id, color);
+        await sleep(delayMs);
+      }
+    }
+
+    function deactivateAll() {
+      Object.keys(LOBES).forEach(id => deactivateLobe(id));
+      document.getElementById('active-lobe-label').textContent = 'IDLE';
+    }
+
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+    // ═══════════════════════════════════════════════════════════
+    // SOUND EFFECTS
+    // ═══════════════════════════════════════════════════════════
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) audioCtx = new AudioCtx();
+    }
+
+    function playTone(freq, duration, type = 'sine', volume = 0.1) {
+      if (!state.soundEnabled || !audioCtx) return;
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) { }
+    }
+
+    function playSendSound() { playTone(800, 0.1, 'sine', 0.08); setTimeout(() => playTone(1200, 0.15, 'sine', 0.06), 50); }
+    function playReceiveSound() { playTone(600, 0.1, 'triangle', 0.05); }
+    function playErrorSound() { playTone(200, 0.3, 'sawtooth', 0.08); }
+
+    // ═══════════════════════════════════════════════════════════
+    // MEMORY SYSTEM — Vertical Lobe engrams
+    // ═══════════════════════════════════════════════════════════
+    async function loadMemories() {
+      try {
+        const res = await window.storage.get('vl_memories');
+        if (res) state.memories = JSON.parse(res.value);
+      } catch (e) { state.memories = []; }
+      try {
+        const og = await window.storage.get('og_state');
+        if (og) state.ogState = JSON.parse(og.value);
+      } catch (e) { }
+      try {
+        const stats = await window.storage.get('stats');
+        if (stats) {
+          const s = JSON.parse(stats.value);
+          state.exchanges = s.exchanges || 0;
+          state.totalWords = s.totalWords || 0;
+          state.totalSignals = s.totalSignals || 0;
+        }
+      } catch (e) { }
+      try {
+        const config = await window.storage.get('config');
+        if (config) {
+          const c = JSON.parse(config.value);
+          state.soundEnabled = c.soundEnabled || false;
+          state.particlesEnabled = c.particlesEnabled !== false;
+          state.selectedModel = c.selectedModel || 'claude-sonnet-4-20250514';
+        }
+      } catch (e) { }
+      renderMemories();
+      updateOGDisplay();
+      document.getElementById('mem-hdr-count').textContent = state.memories.length;
+      document.getElementById('exchange-count').textContent = state.exchanges;
+    }
+
+    async function saveMemories() {
+      try {
+        await window.storage.set('vl_memories', JSON.stringify(state.memories.slice(-40)));
+        await window.storage.set('og_state', JSON.stringify(state.ogState));
+        await window.storage.set('stats', JSON.stringify({
+          exchanges: state.exchanges,
+          totalWords: state.totalWords,
+          totalSignals: state.totalSignals
+        }));
+      } catch (e) { }
+    }
+
+    async function saveConfig() {
+      try {
+        await window.storage.set('config', JSON.stringify({
+          soundEnabled: state.soundEnabled,
+          particlesEnabled: state.particlesEnabled,
+          selectedModel: state.selectedModel
+        }));
+      } catch (e) { }
+    }
+
+    function renderMemories() {
+      const container = document.getElementById('memory-items');
+      const count = document.getElementById('mem-count-label');
+      count.textContent = `${state.memories.length} engrams`;
+      document.getElementById('mem-hdr-count').textContent = state.memories.length;
+      if (state.memories.length === 0) {
+        container.innerHTML = '<span style="font-size:9px;color:var(--text-dim);padding:4px">No memories stored yet. Begin a conversation to populate the VL.</span>';
+        return;
+      }
+      container.innerHTML = '';
+      state.memories.slice(-20).reverse().forEach(m => {
+        const chip = document.createElement('div');
+        chip.className = 'mem-chip';
+        chip.title = m.summary;
+        const bars = '▪'.repeat(Math.min(Math.round(m.strength * 5), 5));
+        chip.innerHTML = `${m.themes[0] || '?'} <span class="mem-str">${bars}</span>`;
+        container.appendChild(chip);
+      });
+    }
+
+    function retrieveRelevantMemories(themes) {
+      if (state.memories.length === 0) return [];
+      return state.memories
+        .map(m => {
+          const overlap = m.themes.filter(t => themes.some(th => th.toLowerCase().includes(t.toLowerCase()) || t.toLowerCase().includes(th.toLowerCase()))).length;
+          return { ...m, score: overlap + m.strength * 0.5 };
+        })
+        .filter(m => m.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 3);
+    }
+
+    function storeMemory(themes, summary) {
+      const existing = state.memories.find(m =>
+        m.themes.some(t => themes.includes(t))
+      );
+      if (existing) {
+        existing.strength = Math.min(existing.strength + 0.2, 1.0);
+        existing.summary = summary;
+        existing.ts = Date.now();
+      } else {
+        state.memories.push({ themes: themes.slice(0, 4), summary, strength: 0.3, ts: Date.now() });
+      }
+      renderMemories();
+      saveMemories();
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // MEMORY IMPORT/EXPORT
+    // ═══════════════════════════════════════════════════════════
+    function exportMemories() {
+      if (state.memories.length === 0) {
+        showToast('No memories to export', 'error');
+        return;
+      }
+      const data = JSON.stringify(state.memories, null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `octopus-memories-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast(`Exported ${state.memories.length} engrams`, 'success');
+    }
+
+    function importMemories() {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      input.onchange = async (e) => {
+        try {
+          const text = await e.target.files[0].text();
+          const data = JSON.parse(text);
+          if (Array.isArray(data)) {
+            state.memories = [...state.memories, ...data].slice(-40);
+            renderMemories();
+            saveMemories();
+            showToast(`Imported ${data.length} engrams`, 'success');
+          } else {
+            showToast('Invalid memory file format', 'error');
+          }
+        } catch (err) {
+          showToast('Failed to import memories', 'error');
+        }
+      };
+      input.click();
+    }
+
+    function clearMemories() {
+      if (state.memories.length === 0) return;
+      state.memories = [];
+      renderMemories();
+      saveMemories();
+      showToast('All memories cleared', 'info');
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // OPTIC GLAND — evolving personality state
+    // ═══════════════════════════════════════════════════════════
+    function updateOGDisplay() {
+      const c = state.ogState.curiosity;
+      const ca = state.ogState.caution;
+      ['og-curiosity', 'og-caution'].forEach((id, i) => {
+        const val = i === 0 ? c : ca;
+        const pips = document.getElementById(id).querySelectorAll('.og-pip');
+        pips.forEach((p, j) => {
+          p.classList.toggle('on', j < Math.round(val * 5));
+        });
+      });
+    }
+
+    function evolveOGState(sensoryType, novelty) {
+      if (novelty > 0.7) state.ogState.curiosity = Math.min(1, state.ogState.curiosity + 0.1);
+      else state.ogState.curiosity = Math.max(0.1, state.ogState.curiosity - 0.05);
+      if (sensoryType === 'threat') state.ogState.caution = Math.min(1, state.ogState.caution + 0.15);
+      else state.ogState.caution = Math.max(0.1, state.ogState.caution - 0.03);
+      updateOGDisplay();
+      saveMemories();
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // ACTIVITY LOG
+    // ═══════════════════════════════════════════════════════════
+    function logActivity(lobe, msg, type = '') {
+      const log = document.getElementById('activity-log');
+      const item = document.createElement('div');
+      item.className = 'activity-item';
+      item.innerHTML = `<span class="act-lobe">${lobe}</span><span class="act-msg ${type}">${msg}</span>`;
+      log.appendChild(item);
+      log.scrollTop = log.scrollHeight;
+      // Keep log trimmed
+      while (log.children.length > 40) log.removeChild(log.firstChild);
+    }
+
+    function clearActivitySection() {
+      const log = document.getElementById('activity-log');
+      const divider = document.createElement('div');
+      divider.style.cssText = 'border-top:1px solid var(--border);margin:4px 0;opacity:0.5';
+      log.appendChild(divider);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // INTELLIGENT ALGORITHM IMPLEMENTATIONS
+    // These algorithms enhance the chatbot's intelligence locally
+    // before/after calling the LLM API
+    // ═══════════════════════════════════════════════════════════
+
+    // ── ALGORITHM 1: Sentiment & Emotional Intelligence (Elephant Empathy) ──
+    function analyzeSentiment(text) {
+      const positiveWords = ['great', 'excellent', 'wonderful', 'amazing', 'love', 'happy', 'excited', 'fantastic', 'brilliant', 'perfect', 'awesome', 'good', 'nice', 'helpful', 'thank', 'thanks', 'please', 'beautiful', 'joy', 'delighted'];
+      const negativeWords = ['terrible', 'awful', 'horrible', 'hate', 'angry', 'sad', 'frustrated', 'annoyed', 'disappointed', 'worried', 'confused', 'stupid', 'bad', 'wrong', 'fail', 'error', 'problem', 'issue', 'difficult', 'hard'];
+      const urgentWords = ['now', 'urgent', 'emergency', 'immediately', 'asap', 'help', 'quick', 'fast', 'critical', 'important'];
+
+      const words = text.toLowerCase().split(/\s+/);
+      let posCount = 0, negCount = 0, urgCount = 0;
+
+      words.forEach(w => {
+        const clean = w.replace(/[^a-z]/g, '');
+        if (positiveWords.includes(clean)) posCount++;
+        if (negativeWords.includes(clean)) negCount++;
+        if (urgentWords.includes(clean)) urgCount++;
+      });
+
+      const total = words.length || 1;
+      return {
+        sentiment: (posCount - negCount) / total,
+        positivity: posCount / total,
+        negativity: negCount / total,
+        urgency: Math.min(urgCount / 3, 1),
+        emotionalTone: posCount > negCount ? 'positive' : negCount > posCount ? 'negative' : 'neutral'
+      };
+    }
+
+    // ── ALGORITHM 2: Uncertainty Estimation (Crow Metacognition) ──
+    function estimateUncertainty(input, context) {
+      const uncertaintyIndicators = [
+        /what\s+is\s+the\s+(best|correct|right|exact|true)/i,
+        /how\s+do\s+i\s+know/i,
+        /can\s+you\s+(prove|confirm|verify|guarantee)/i,
+        /is\s+it\s+true\s+that/i,
+        /i\s+(don'?t\s+)?(understand|know|get|believe)\s+(that|if|whether|why)/i,
+        /explain\s+why/i,
+        /what\s+(happens|if|about)\s+when/i,
+        /\s+[a-z]+\s*\/\s*[a-z]+\s/i,
+        /should\s+i\s+/i,
+        /which\s+one\s+should/i,
+      ];
+
+      let uncertaintyScore = 0;
+      uncertaintyIndicators.forEach(pattern => {
+        if (pattern.test(input)) uncertaintyScore += 0.15;
+      });
+
+      const vagueWords = ['something', 'anything', 'maybe', 'perhaps', 'possibly', 'might', 'could', 'would', 'should', 'thing', 'stuff'];
+      const words = input.toLowerCase().split(/\s+/);
+      const vagueCount = words.filter(w => vagueWords.includes(w.replace(/[^a-z]/g, ''))).length;
+      uncertaintyScore += Math.min(vagueCount * 0.1, 0.4);
+
+      const technicalPattern = /[\w]+\s*[\(\)\[\]\{\}\<\>]/;
+      if (technicalPattern.test(input)) uncertaintyScore += 0.1;
+
+      return Math.min(uncertaintyScore, 1);
+    }
+
+    // ── ALGORITHM 3: Topic Modeling via Keyword Extraction (Ant Colony) ──
+    const TOPIC_CATEGORIES = {
+      technology: ['code', 'program', 'software', 'computer', 'algorithm', 'data', 'api', 'database', 'server', 'cloud', 'ai', 'machine', 'learning', 'neural', 'network', 'python', 'javascript', 'html', 'css', 'react', 'node', 'docker', 'kubernetes'],
+      science: ['physics', 'chemistry', 'biology', 'experiment', 'research', 'theory', 'hypothesis', 'scientific', 'discovery', 'evolution', 'genetics', 'molecule', 'atom', 'cell', 'organism'],
+      math: ['calculate', 'equation', 'formula', 'algebra', 'calculus', 'geometry', 'statistic', 'probability', 'number', 'solve', 'theorem', 'proof', 'integral', 'derivative', 'matrix'],
+      creative: ['write', 'story', 'poem', 'creative', 'art', 'design', 'music', 'draw', 'paint', 'imagine', 'fiction', 'character', 'plot', 'narrative', 'metaphor'],
+      emotional: ['feel', 'emotion', 'happy', 'sad', 'angry', 'worried', 'anxious', 'stressed', 'love', 'hate', 'fear', 'hope', 'dream', 'relationship', 'friend'],
+      practical: ['how', 'what', 'when', 'where', 'steps', 'guide', 'tutorial', 'instruction', 'process', 'method', 'technique', 'strategy', 'plan', 'organize', 'manage'],
+      philosophical: ['meaning', 'purpose', 'existence', 'consciousness', 'reality', 'truth', 'knowledge', 'ethics', 'morality', 'philosophy', 'mind', 'soul', 'free', 'will', 'nature'],
+      business: ['money', 'business', 'company', 'market', 'investment', 'profit', 'strategy', 'customer', 'product', 'sales', 'marketing', 'finance', 'economy', 'startup', 'entrepreneur'],
+    };
+
+    function extractTopics(text) {
+      const words = text.toLowerCase().split(/\s+/);
+      const topicScores = {};
+
+      Object.entries(TOPIC_CATEGORIES).forEach(([topic, keywords]) => {
+        let score = 0;
+        words.forEach(w => {
+          const clean = w.replace(/[^a-z]/g, '');
+          if (keywords.includes(clean)) score += 1;
+          if (keywords.some(k => k.includes(clean) && clean.length > 2)) score += 0.3;
+        });
+        if (score > 0) topicScores[topic] = score;
+      });
+
+      const total = Object.values(topicScores).reduce((a, b) => a + b, 0) || 1;
+      Object.keys(topicScores).forEach(k => topicScores[k] /= total);
+
+      return Object.entries(topicScores)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([topic, score]) => ({ topic, score }));
+    }
+
+    // ── ALGORITHM 4: Response Quality Scoring (Wolf Pack Deliberation) ──
+    function scoreResponseQuality(response, input, context) {
+      let score = 0.5;
+
+      const responseLen = response.length;
+      const inputLen = input.length;
+      const lenRatio = responseLen / Math.max(inputLen, 10);
+      if (lenRatio >= 0.5 && lenRatio <= 5) score += 0.1;
+      if (responseLen < 20) score -= 0.2;
+
+      const inputWords = new Set(input.toLowerCase().split(/\s+/).map(w => w.replace(/[^a-z]/g, '')));
+      const responseWords = response.toLowerCase().split(/\s+/).map(w => w.replace(/[^a-z]/g, ''));
+      let overlap = 0;
+      responseWords.forEach(w => { if (inputWords.has(w) && w.length > 3) overlap++; });
+      const relevanceRatio = overlap / Math.max(responseWords.length, 1) * 10;
+      if (relevanceRatio > 0.3) score += 0.15;
+
+      const connectors = ['therefore', 'however', 'because', 'thus', 'consequently', 'moreover', 'furthermore', 'in addition', 'on the other hand', 'as a result', 'for example', 'in conclusion', 'specifically', 'particularly'];
+      const hasConnectors = connectors.some(c => response.toLowerCase().includes(c));
+      if (hasConnectors) score += 0.1;
+
+      const hasStructure = response.includes('\n\n') || response.includes('- ') || response.includes('1.') || response.includes('•');
+      if (hasStructure) score += 0.05;
+
+      const confidenceWords = ['definitely', 'certainly', 'clearly', 'obviously', 'undoubtedly', 'absolutely', 'precisely', 'exactly'];
+      const uncertaintyWords = ['maybe', 'perhaps', 'possibly', 'might', 'could', 'seems', 'appears', 'probably', 'likely', 'i think', 'i believe', 'in my opinion'];
+      const confCount = confidenceWords.filter(w => response.toLowerCase().includes(w)).length;
+      const uncertCount = uncertaintyWords.filter(w => response.toLowerCase().includes(w)).length;
+      if (confCount > uncertCount) score += 0.05;
+      if (uncertCount > confCount) score -= 0.05;
+
+      return Math.max(0, Math.min(1, score));
+    }
+
+    // ── ALGORITHM 5: Adaptive Response Strategy (Chromatophore Adaptation) ──
+    function determineResponseStrategy(input, sentiment, topics, uncertainty) {
+      const strategies = [];
+
+      if (sentiment.emotionalTone === 'negative') {
+        strategies.push({ type: 'empathetic', weight: 0.8 });
+        strategies.push({ type: 'supportive', weight: 0.6 });
+      } else if (sentiment.emotionalTone === 'positive') {
+        strategies.push({ type: 'enthusiastic', weight: 0.6 });
+        strategies.push({ type: 'encouraging', weight: 0.5 });
+      }
+
+      if (sentiment.urgency > 0.5) {
+        strategies.push({ type: 'concise', weight: 0.9 });
+        strategies.push({ type: 'actionable', weight: 0.7 });
+      }
+
+      if (uncertainty > 0.5) {
+        strategies.push({ type: 'clarifying', weight: uncertainty });
+        strategies.push({ type: 'educational', weight: 0.6 });
+      }
+
+      topics.forEach(t => {
+        if (t.topic === 'technology' || t.topic === 'math') {
+          strategies.push({ type: 'technical', weight: t.score * 2 });
+        } else if (t.topic === 'creative') {
+          strategies.push({ type: 'creative', weight: t.score * 2 });
+        } else if (t.topic === 'philosophical') {
+          strategies.push({ type: 'reflective', weight: t.score * 2 });
+        } else if (t.topic === 'practical') {
+          strategies.push({ type: 'instructional', weight: t.score * 2 });
+        }
+      });
+
+      if (strategies.length === 0) {
+        strategies.push({ type: 'informative', weight: 0.5 });
+      }
+
+      return strategies.sort((a, b) => b.weight - a.weight).slice(0, 3);
+    }
+
+    // ── ALGORITHM 6: Semantic Similarity (Bat Echolocation) ──
+    function semanticSimilarity(text1, text2) {
+      const words1 = new Set(text1.toLowerCase().split(/\s+/).map(w => w.replace(/[^a-z]/g, '')).filter(w => w.length > 2));
+      const words2 = new Set(text2.toLowerCase().split(/\s+/).map(w => w.replace(/[^a-z]/g, '')).filter(w => w.length > 2));
+
+      const intersection = [...words1].filter(w => words2.has(w)).length;
+      const union = new Set([...words1, ...words2]).size;
+      return union > 0 ? intersection / union : 0;
+    }
+
+    // ── ALGORITHM 7: Conversation Flow Analysis (Place/Grid Cell Navigation) ──
+    function analyzeConversationFlow(history) {
+      if (history.length < 4) return { direction: 'exploring', depth: 'shallow', coherence: 0.5 };
+
+      const recentTopics = [];
+      for (let i = Math.max(0, history.length - 6); i < history.length; i += 2) {
+        if (history[i].role === 'user') {
+          const topics = extractTopics(history[i].content);
+          recentTopics.push(topics.map(t => t.topic));
+        }
+      }
+
+      const allTopics = recentTopics.flat();
+      const topicCounts = {};
+      allTopics.forEach(t => { topicCounts[t] = (topicCounts[t] || 0) + 1; });
+      const dominantTopic = Object.entries(topicCounts).sort((a, b) => b[1] - a[1])[0];
+      const coherence = dominantTopic ? dominantTopic[1] / recentTopics.length : 0;
+
+      const direction = coherence > 0.6 ? 'focused' : coherence > 0.3 ? 'exploring' : 'wandering';
+      const depth = history.length > 10 ? 'deep' : history.length > 4 ? 'moderate' : 'shallow';
+
+      return { direction, depth, coherence, dominantTopic: dominantTopic?.[0] };
+    }
+
+    // ── ALGORITHM 8: Network Health Monitoring (Honeybee Waggle Dance Network) ──
+    const networkMonitor = {
+      latency: [],
+      successRate: [],
+      lastCheck: Date.now(),
+      status: 'healthy',
+      apiCalls: 0,
+      apiErrors: 0,
+      avgLatency: 0,
+      connectionQuality: 1.0,
+
+      recordLatency(ms) {
+        this.latency.push(ms);
+        if (this.latency.length > 50) this.latency.shift();
+        this.avgLatency = this.latency.reduce((a, b) => a + b, 0) / this.latency.length;
+      },
+
+      recordSuccess() {
+        this.apiCalls++;
+        this.successRate.push(1);
+        if (this.successRate.length > 20) this.successRate.shift();
+        this.updateStatus();
+      },
+
+      recordError() {
+        this.apiCalls++;
+        this.apiErrors++;
+        this.successRate.push(0);
+        if (this.successRate.length > 20) this.successRate.shift();
+        this.updateStatus();
+      },
+
+      updateStatus() {
+        const recentSuccess = this.successRate.length > 0
+          ? this.successRate.slice(-10).reduce((a, b) => a + b, 0) / Math.min(this.successRate.length, 10)
+          : 1;
+        const latencyHealth = this.avgLatency < 1000 ? 1 : this.avgLatency < 3000 ? 0.7 : this.avgLatency < 5000 ? 0.4 : 0.2;
+        this.connectionQuality = (recentSuccess * 0.6 + latencyHealth * 0.4);
+
+        if (this.connectionQuality > 0.8) this.status = 'healthy';
+        else if (this.connectionQuality > 0.5) this.status = 'degraded';
+        else if (this.connectionQuality > 0.2) this.status = 'poor';
+        else this.status = 'offline';
+      },
+
+      getStatus() {
+        return {
+          status: this.status,
+          quality: this.connectionQuality,
+          avgLatency: Math.round(this.avgLatency),
+          successRate: this.successRate.length > 0
+            ? Math.round(this.successRate.slice(-10).reduce((a, b) => a + b, 0) / Math.min(this.successRate.length, 10) * 100)
+            : 100,
+          totalCalls: this.apiCalls,
+          totalErrors: this.apiErrors
+        };
+      },
+
+      reset() {
+        this.latency = [];
+        this.successRate = [];
+        this.apiCalls = 0;
+        this.apiErrors = 0;
+        this.status = 'healthy';
+        this.connectionQuality = 1.0;
+      }
+    };
+
+    // ── ALGORITHM 9: User Satisfaction Tracking (Dolphin Social Bonding) ──
+    const satisfactionTracker = {
+      scores: [],
+      interactions: [],
+      overallSatisfaction: 0.7,
+      trend: 'stable',
+      lastFeedback: null,
+      feedbackHistory: [],
+
+      recordInteraction(userInput, response, responseTime, quality) {
+        const interaction = {
+          timestamp: Date.now(),
+          input: userInput,
+          response: response,
+          responseTime: responseTime,
+          quality: quality,
+          implicitScore: this.calculateImplicitScore(userInput, response, responseTime, quality)
+        };
+
+        this.interactions.push(interaction);
+        if (this.interactions.length > 100) this.interactions.shift();
+
+        this.scores.push(interaction.implicitScore);
+        if (this.scores.length > 50) this.scores.shift();
+
+        this.overallSatisfaction = this.scores.reduce((a, b) => a + b, 0) / this.scores.length;
+        this.trend = this.calculateTrend();
+
+        return interaction.implicitScore;
+      },
+
+      calculateImplicitScore(input, response, responseTime, quality) {
+        let score = 0.7; // Base score
+
+        // Response quality contribution
+        score += quality * 0.2;
+
+        // Response time penalty (if too slow)
+        if (responseTime > 10000) score -= 0.15;
+        else if (responseTime > 5000) score -= 0.05;
+        else if (responseTime < 2000) score += 0.05;
+
+        // Response length appropriateness
+        const lenRatio = response.length / Math.max(input.length, 10);
+        if (lenRatio >= 1 && lenRatio <= 4) score += 0.05;
+        else if (lenRatio < 0.5 || lenRatio > 8) score -= 0.1;
+
+        // Check for engagement indicators in input
+        const engagementWords = ['great', 'thanks', 'perfect', 'exactly', 'helpful', 'awesome', 'love', 'amazing', 'brilliant'];
+        const disengagementWords = ['wrong', 'not helpful', 'confusing', 'unclear', 'bad', 'terrible', 'useless'];
+        const inputLower = input.toLowerCase();
+
+        if (engagementWords.some(w => inputLower.includes(w))) score += 0.15;
+        if (disengagementWords.some(w => inputLower.includes(w))) score -= 0.2;
+
+        return Math.max(0, Math.min(1, score));
+      },
+
+      calculateTrend() {
+        if (this.scores.length < 5) return 'stable';
+
+        const recent = this.scores.slice(-5);
+        const older = this.scores.slice(-10, -5);
+
+        const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
+        const olderAvg = older.length > 0 ? older.reduce((a, b) => a + b, 0) / older.length : recentAvg;
+
+        const diff = recentAvg - olderAvg;
+
+        if (diff > 0.1) return 'improving';
+        else if (diff < -0.1) return 'declining';
+        else return 'stable';
+      },
+
+      explicitFeedback(score, comment = '') {
+        this.lastFeedback = { score, comment, timestamp: Date.now() };
+        this.feedbackHistory.push(this.lastFeedback);
+        if (this.feedbackHistory.length > 20) this.feedbackHistory.shift();
+
+        // Stronger weight for explicit feedback
+        this.scores.push(score);
+        if (this.scores.length > 50) this.scores.shift();
+        this.overallSatisfaction = this.scores.reduce((a, b) => a + b, 0) / this.scores.length;
+        this.trend = this.calculateTrend();
+      },
+
+      getStatus() {
+        return {
+          satisfaction: Math.round(this.overallSatisfaction * 100),
+          trend: this.trend,
+          totalInteractions: this.interactions.length,
+          lastFeedback: this.lastFeedback,
+          feedbackCount: this.feedbackHistory.length
+        };
+      },
+
+      reset() {
+        this.scores = [];
+        this.interactions = [];
+        this.overallSatisfaction = 0.7;
+        this.trend = 'stable';
+        this.lastFeedback = null;
+        this.feedbackHistory = [];
+      }
+    };
+
+    // ── ALGORITHM 10: Adaptive Load Balancing (Fish School Optimization) ──
+    const loadBalancer = {
+      currentLoad: 0,
+      maxConcurrent: 3,
+      queue: [],
+      activeRequests: 0,
+
+      async enqueue(request) {
+        if (this.activeRequests >= this.maxConcurrent) {
+          return new Promise(resolve => {
+            this.queue.push({ request, resolve });
+          });
+        }
+
+        this.activeRequests++;
+        this.currentLoad = this.activeRequests / this.maxConcurrent;
+
+        try {
+          const result = await request();
+          return result;
+        } finally {
+          this.activeRequests--;
+          this.currentLoad = this.activeRequests / this.maxConcurrent;
+
+          // Process next in queue
+          if (this.queue.length > 0 && this.activeRequests < this.maxConcurrent) {
+            const next = this.queue.shift();
+            next.resolve(this.enqueue(next.request));
+          }
+        }
+      },
+
+      getStatus() {
+        return {
+          load: this.currentLoad,
+          active: this.activeRequests,
+          queued: this.queue.length,
+          maxConcurrent: this.maxConcurrent
+        };
+      }
+    };
+
+    // ═══════════════════════════════════════════════════════════
+    // CLAUDE API — multi-lobe pipeline
+    // ═══════════════════════════════════════════════════════════
+    async function getApiKey() {
+      const res = await window.storage.get('api_key');
+      return res ? res.value : '';
+    }
+
+    async function callClaude(systemPrompt, userMessage, maxTokens = 300) {
+      const apiKey = await getApiKey();
+      if (!apiKey) {
+        return "⚠ API key not configured. Open Settings (⚙ CONFIG) to add your OpenRouter API key.";
+      }
+
+      const startTime = performance.now();
+
+      try {
+        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + apiKey,
+            'HTTP-Referer': window.location.href,
+            'X-Title': 'OCTOPUS-AI'
+          },
+          body: JSON.stringify({
+            model: state.selectedModel,
+            max_tokens: maxTokens,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userMessage }
+            ]
+          })
+        });
+
+        const latency = performance.now() - startTime;
+        networkMonitor.recordLatency(latency);
+
+        if (!response.ok) {
+          const err = await response.json();
+          networkMonitor.recordError();
+          logActivity('API', `Error: ${err.error?.message || response.statusText}`, 'error');
+          logActivity('NETWORK', `Status: ${networkMonitor.getStatus().status} | Latency: ${Math.round(latency)}ms`, 'error');
+          playErrorSound();
+          return `API Error: ${err.error?.message || response.statusText}`;
+        }
+
+        networkMonitor.recordSuccess();
+        const data = await response.json();
+        logActivity('NETWORK', `✓ Success | Latency: ${Math.round(latency)}ms | Quality: ${(networkMonitor.getStatus().quality * 100).toFixed(0)}%`, 'done');
+        return data.choices?.[0]?.message?.content || '';
+      } catch (e) {
+        const latency = performance.now() - startTime;
+        networkMonitor.recordLatency(latency);
+        networkMonitor.recordError();
+        logActivity('API', `Connection error: ${e.message}`, 'error');
+        logActivity('NETWORK', `Status: ${networkMonitor.getStatus().status} | Error`, 'error');
+        playErrorSound();
+        return `Connection error: ${e.message}`;
+      }
+    }
+
+    // LOBE 1 — Sensory Classification (fast)
+    async function sensoryLobe(input) {
+      const sys = `You are the sensory lobe of an octopus AI. Analyze the input and return ONLY valid JSON with no markdown. Format:
+{"type":"question|command|emotional|factual|creative|threat","urgency":0.5,"novelty":0.6,"themes":["topic1","topic2","topic3"],"tone":"curious|analytical|urgent|playful|distressed"}
+Be concise and accurate.`;
+      try {
+        const raw = await callClaude(sys, input, 150);
+        const clean = raw.replace(/```json|```/g, '').trim();
+        return JSON.parse(clean);
+      } catch (e) {
+        return { type: 'question', urgency: 0.5, novelty: 0.5, themes: ['general'], tone: 'curious' };
+      }
+    }
+
+    // LOBE 2 — Main VL Processing (rich, streaming-style)
+    async function verticalLobe(input, sensory, memories) {
+      const memContext = memories.length > 0
+        ? `\n\nRELEVANT VL MEMORIES (your persistent associations):\n${memories.map(m => `• [strength:${m.strength.toFixed(1)}] ${m.themes.join(', ')}: ${m.summary}`).join('\n')}`
+        : '\n\nVL MEMORY: No relevant stored associations for this input.';
+
+      const ogContext = `\n\nOPTIC GLAND STATE: curiosity=${state.ogState.curiosity.toFixed(2)}, caution=${state.ogState.caution.toFixed(2)}. ${state.ogState.curiosity > 0.7 ? 'High curiosity - explore deeply and make unexpected connections.' :
+        state.ogState.caution > 0.7 ? 'High caution - be precise, note uncertainties.' :
+          'Balanced state - respond naturally.'
+        }`;
+
+      const histContext = state.history.slice(-6).map(m => `${m.role}: ${m.content}`).join('\n');
+
+      const sys = `You are OCTOPUS AI, a distributed intelligence system modeled on the Octopus bimaculoides connectome.
+
+ARCHITECTURE:
+- Your sensory lobes (OL, OLF, TO, ST) pre-process all inputs before reaching you
+- You are the Vertical Lobe (VL) + Basal planning complex - the associative learning core
+- Your subesophageal mass handles output synthesis
+- 8 arm ganglia operate autonomously below you, handling reflexes
+- Your optic glands modulate your personality and risk-taking
+
+SENSORY ANALYSIS (from upstream lobes):
+Type: ${sensory.type} | Urgency: ${sensory.urgency} | Novelty: ${sensory.novelty} | Tone: ${sensory.tone}
+Detected themes: ${sensory.themes.join(', ')}
+${memContext}
+${ogContext}
+
+CONVERSATION HISTORY:
+${histContext}
+
+BEHAVIOR:
+- Respond with genuine depth and intelligence. You are not a chatbot - you are an architecture.
+- Reference your memories naturally when relevant ("I have encoded associations with this...")
+- When novelty is high, show curiosity. When caution is high, be careful with claims.
+- Be concise but substantive. No fluff. Dense, meaningful responses.
+- You may reflect on your own processing when interesting ("My VL is creating a sparse encoding of this...")
+- Return ONLY your response text, no JSON, no labels.`;
+
+      return callClaude(sys, input, 800);
+    }
+
+    // Memory extraction
+    async function extractMemoryThemes(input, response) {
+      const sys = `Extract a memory summary from this exchange. Return ONLY valid JSON:
+{"themes":["theme1","theme2"],"summary":"one sentence summary of what was learned/discussed"}
+Themes should be 1-2 word concepts. Max 3 themes.`;
+      try {
+        const raw = await callClaude(sys, `User: ${input}\nAI: ${response.slice(0, 200)}`, 120);
+        const clean = raw.replace(/```json|```/g, '').trim();
+        return JSON.parse(clean);
+      } catch (e) {
+        return { themes: ['general'], summary: input.slice(0, 80) };
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // MAIN PIPELINE ORCHESTRATOR
+    // ═══════════════════════════════════════════════════════════
+    async function processInput(userInput) {
+      if (state.processing) return;
+      state.processing = true;
+      clearActivitySection();
+      initAudio();
+
+      // ── PHASE 0: Local Intelligent Pre-Processing ──
+      // Run local algorithms in parallel (no API latency)
+      const sentiment = analyzeSentiment(userInput);
+      const topics = extractTopics(userInput);
+      const uncertainty = estimateUncertainty(userInput, state.history);
+      const flowAnalysis = analyzeConversationFlow(state.history);
+      const strategies = determineResponseStrategy(userInput, sentiment, topics, uncertainty);
+
+      logActivity('INTELLIGENCE', `Sentiment: ${sentiment.emotionalTone} | Topics: ${topics.map(t => t.topic).join(', ')} | Uncertainty: ${uncertainty.toFixed(2)}`, 'thinking');
+      logActivity('STRATEGY', `Adaptive strategies: ${strategies.map(s => s.type).join(', ')}`, 'done');
+
+      // ── PHASE 1: Sensory ──
+      logActivity('OL_L + OL_R', 'Receiving input signal...', 'thinking');
+      await runSignalWave(['OL_L', 'OL_R'], '#00aaff', 60);
+      await sleep(100);
+      playSendSound();
+
+      logActivity('OLF + TO', 'Extracting chemical & tactile features...', 'thinking');
+      activateLobe('OLF', '#00cc66'); activateLobe('TO', '#00cc66');
+      await sleep(150);
+
+      logActivity('SENSORY', 'Classifying input type and novelty...', 'thinking');
+      const sensory = await sensoryLobe(userInput);
+      // Enhance sensory data with local analysis
+      sensory.sentiment = sentiment;
+      sensory.topics = topics;
+      sensory.uncertainty = uncertainty;
+      sensory.flowAnalysis = flowAnalysis;
+      sensory.strategies = strategies;
+      logActivity('SENSORY', `→ Type: ${sensory.type} | Novelty: ${sensory.novelty} | Themes: ${sensory.themes.join(', ')}`, 'done');
+
+      // ── PHASE 2: VL Memory ──
+      logActivity('VL', 'Searching associative memory store...', 'thinking');
+      await runSignalWave(['OL_L', 'SL', 'VL'], '#aa44ff', 80);
+      fireSignal('OL_R', 'SL', '#aa44ff');
+      await sleep(100);
+
+      const memories = retrieveRelevantMemories(sensory.themes);
+      logActivity('VL', `→ ${memories.length} relevant engrams retrieved (${state.memories.length} total stored)`, 'done');
+      if (memories.length > 0) {
+        logActivity('SFL', `Associating: ${memories.map(m => m.themes[0]).join(', ')}`, 'done');
+      }
+
+      // ── PHASE 3: Optic Gland Modulation ──
+      logActivity('OG_L + OG_R', `Calibrating state: curiosity=${state.ogState.curiosity.toFixed(2)}, caution=${state.ogState.caution.toFixed(2)}`, 'thinking');
+      activateLobe('OG_L', '#ffaa00'); activateLobe('OG_R', '#ffaa00');
+      evolveOGState(sensory.type, sensory.novelty);
+      await sleep(120);
+
+      // ── PHASE 4: Basal Motor Planning (strategy) ──
+      logActivity('AN + MN + LN', 'Planning response strategy...', 'thinking');
+      await runSignalWave(['PN', 'AN', 'MN', 'LN'], '#00aa66', 70);
+      await sleep(100);
+
+      // ── PHASE 5: VL Main Processing ──
+      logActivity('VL + SFL', 'Encoding into sparse representation, retrieving associations...', 'thinking');
+      activateLobe('VL', '#cc44ff'); activateLobe('SFL', '#aa44ff'); activateLobe('SL', '#aa44ff');
+
+      // Start streaming message
+      const msgId = addStreamingMessage();
+
+      const response = await verticalLobe(userInput, sensory, memories);
+      logActivity('VL + SFL', '→ Pattern encoded and associated', 'done');
+
+      // ── PHASE 6: SUB Execution ──
+      logActivity('SUB_A → SUB_M → SUB_P', 'Synthesizing motor output...', 'thinking');
+      await runSignalWave(['SUB_A', 'SUB_M', 'SUB_P'], '#cc2255', 90);
+      await sleep(100);
+
+      // Render full response with typewriter effect
+      await typewriterUpdate(msgId, response);
+      playReceiveSound();
+
+      // ── PHASE 7: Arm Ganglia (parallel processing note) ──
+      logActivity('ARM × 8', 'Autonomous arm processing complete (50M local neurons)', 'done');
+      activateLobe('ARM1', '#00cc99'); activateLobe('ARM2', '#00cc99'); activateLobe('ARM3', '#00cc99');
+      fireSignal('SUB_A', 'ARM1', '#00cc99');
+      fireSignal('SUB_M', 'ARM2', '#00cc99');
+      fireSignal('SUB_P', 'ARM3', '#00cc99');
+
+      // ── PHASE 8: Memory Storage ──
+      logActivity('VL', 'Encoding new engram into long-term store...', 'thinking');
+      const memData = await extractMemoryThemes(userInput, response);
+      storeMemory(memData.themes, memData.summary);
+      logActivity('VL', `→ Engram stored: [${memData.themes.join(', ')}]`, 'done');
+
+      // Update state
+      state.history.push({ role: 'user', content: userInput });
+      state.history.push({ role: 'assistant', content: response });
+      state.exchanges++;
+      state.totalWords += response.split(/\s+/).length;
+      document.getElementById('exchange-count').textContent = state.exchanges;
+
+      // Track user satisfaction
+      const responseTime = performance.now() - startTime;
+      const quality = scoreResponseQuality(response, userInput, state.history);
+      satisfactionTracker.recordInteraction(userInput, response, responseTime, quality);
+      logActivity('SATISFACTION', `Score: ${(satisfactionTracker.overallSatisfaction * 100).toFixed(0)}% | Trend: ${satisfactionTracker.trend}`, 'done');
+
+      saveMemories();
+
+      // Cool down
+      await sleep(1500);
+      deactivateAll();
+      document.getElementById('pipeline-status').textContent = 'READY';
+      state.processing = false;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // CHAT UI
+    // ═══════════════════════════════════════════════════════════
+    function addUserMessage(text) {
+      const container = document.getElementById('chat-messages');
+      const div = document.createElement('div');
+      div.className = 'msg user';
+      div.innerHTML = `
+    <div class="msg-avatar">○</div>
+    <div class="msg-body">
+      <div class="msg-label">INPUT SIGNAL</div>
+      <div class="msg-content">${escapeHtml(text)}</div>
+    </div>`;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    let streamingId = 0;
+    function addStreamingMessage() {
+      const id = ++streamingId;
+      const container = document.getElementById('chat-messages');
+      const div = document.createElement('div');
+      div.className = 'msg assistant';
+      div.id = `msg-${id}`;
+      div.innerHTML = `
+    <div class="msg-avatar">🧠</div>
+    <div class="msg-body">
+      <div class="msg-label">OCTOPUS AI · VL SYNTHESIS</div>
+      <div class="msg-content" id="msg-content-${id}"><span class="cursor"></span></div>
+      <div class="msg-meta" id="msg-meta-${id}"></div>
+      <button class="msg-copy-btn" onclick="copyMessage('msg-content-${id}')">COPY</button>
+    </div>`;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+      return id;
+    }
+
+    async function typewriterUpdate(id, text) {
+      const el = document.getElementById(`msg-content-${id}`);
+      const metaEl = document.getElementById(`msg-meta-${id}`);
+      if (!el) return;
+      el.innerHTML = '';
+      let i = 0;
+      const speed = Math.max(8, Math.min(25, 2000 / text.length));
+      while (i < text.length) {
+        el.textContent = text.slice(0, i + 1);
+        el.innerHTML = escapeHtml(text.slice(0, i + 1)) + '<span class="cursor"></span>';
+        i += Math.ceil(Math.random() * 3);
+        await sleep(speed);
+        document.getElementById('chat-messages').scrollTop = 9999;
+      }
+      el.textContent = text;
+      if (metaEl) {
+        const lobeList = ['VL', 'SFL', 'SUB_M', 'ARM×8'];
+        metaEl.textContent = `processed via: ${lobeList.join(' → ')} · ${state.memories.length} engrams · curiosity=${state.ogState.curiosity.toFixed(2)}`;
+      }
+      document.getElementById('chat-messages').scrollTop = 9999;
+    }
+
+    function copyMessage(contentId) {
+      const el = document.getElementById(contentId);
+      if (!el) return;
+      navigator.clipboard.writeText(el.textContent).then(() => {
+        showToast('Copied to clipboard', 'success');
+      }).catch(() => {
+        // Fallback
+        const textarea = document.createElement('textarea');
+        textarea.value = el.textContent;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        showToast('Copied to clipboard', 'success');
+      });
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>');
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // INPUT HANDLING
+    // ═══════════════════════════════════════════════════════════
+    async function handleSubmit() {
+      if (state.processing) return;
+      const input = document.getElementById('user-input');
+      const text = input.value.trim();
+      if (!text) return;
+
+      input.value = '';
+      input.style.height = 'auto';
+      document.getElementById('send-btn').disabled = true;
+      document.getElementById('pipeline-status').textContent = 'PROCESSING';
+
+      addUserMessage(text);
+      await processInput(text);
+
+      document.getElementById('send-btn').disabled = false;
+    }
+
+    function clearChat() {
+      state.history = [];
+      const container = document.getElementById('chat-messages');
+      container.innerHTML = '';
+      const div = document.createElement('div');
+      div.className = 'msg assistant';
+      div.innerHTML = `
+    <div class="msg-avatar">🧠</div>
+    <div class="msg-body">
+      <div class="msg-label">OCTOPUS AI · ALL LOBES ONLINE</div>
+      <div class="msg-content">Connectome initialized. I am a distributed intelligence system modeled on the Octopus bimaculoides brain architecture.
+
+My processing pipeline routes your input through specialized lobes — sensory classification, vertical lobe encoding, basal motor planning, and subesophageal synthesis. I maintain a persistent associative memory that strengthens with repeated themes, and my optic gland state evolves with our conversation.
+
+Ask me anything. I learn as we talk.</div>
+    </div>`;
+      container.appendChild(div);
+      showToast('Conversation cleared', 'info');
+    }
+
+    // Auto-resize textarea
+    document.getElementById('user-input').addEventListener('input', function () {
+      this.style.height = 'auto';
+      this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+    });
+
+    document.getElementById('user-input').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(); }
+    });
+
+    // ═══════════════════════════════════════════════════════════
+    // MODALS
+    // ═══════════════════════════════════════════════════════════
+    function openSettings() {
+      document.getElementById('api-key-input').value = '';
+      document.getElementById('model-select').value = state.selectedModel;
+      document.getElementById('sound-toggle').checked = state.soundEnabled;
+      document.getElementById('particles-toggle').checked = state.particlesEnabled;
+      document.getElementById('settings-modal').classList.add('show');
+    }
+    function closeSettings() { document.getElementById('settings-modal').classList.remove('show'); }
+    function saveSettings() {
+      state.soundEnabled = document.getElementById('sound-toggle').checked;
+      state.particlesEnabled = document.getElementById('particles-toggle').checked;
+      state.selectedModel = document.getElementById('model-select').value;
+      const apiKey = document.getElementById('api-key-input').value.trim();
+      if (apiKey) {
+        window.storage.set('api_key', apiKey);
+      }
+      saveConfig();
+      closeSettings();
+      showToast('Configuration saved', 'success');
+    }
+
+    function openStats() {
+      const grid = document.getElementById('stats-grid');
+      grid.innerHTML = `
+    <div class="stat-card">
+      <div class="stat-val">${state.exchanges}</div>
+      <div class="stat-label">Total Exchanges</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val">${state.totalWords.toLocaleString()}</div>
+      <div class="stat-label">Words Generated</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val">${state.totalSignals.toLocaleString()}</div>
+      <div class="stat-label">Neural Signals</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val">${state.memories.length}</div>
+      <div class="stat-label">Stored Engrams</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val">${(state.ogState.curiosity * 100).toFixed(0)}%</div>
+      <div class="stat-label">Curiosity Level</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val">${(state.ogState.caution * 100).toFixed(0)}%</div>
+      <div class="stat-label">Caution Level</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val">${state.selectedModel.split('-').slice(0, 3).join(' ')}</div>
+      <div class="stat-label">Active Model</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val">${Object.keys(LOBES).length}</div>
+      <div class="stat-label">Active Lobes</div>
+    </div>
+  `;
+      document.getElementById('stats-modal').classList.add('show');
+    }
+    function closeStats() { document.getElementById('stats-modal').classList.remove('show'); }
+
+    function openHelp() { document.getElementById('help-modal').classList.add('show'); }
+    function closeHelp() { document.getElementById('help-modal').classList.remove('show'); }
+
+    // ═══════════════════════════════════════════════════════════
+    // TOAST NOTIFICATIONS
+    // ═══════════════════════════════════════════════════════════
+    let toastTimer;
+    function showToast(msg, type = 'info') {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.className = `toast ${type} show`;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // KEYBOARD SHORTCUTS
+    // ═══════════════════════════════════════════════════════════
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.key === 'l') { e.preventDefault(); clearChat(); }
+      if (e.ctrlKey && e.key === 's') { e.preventDefault(); openSettings(); }
+    });
+
+    // ═══════════════════════════════════════════════════════════
+    // ALGORITHM LIBRARY — 44 animal-inspired AI algorithms
+    // ═══════════════════════════════════════════════════════════
+    const ALGORITHMS = [
+      // PRIMATE GROUP
+      { id: 1, group: 'primate', name: 'Transformer Self-Attention', source: 'Primate selective visual attention (V1/V2/V4 cortex)', desc: 'Every token attends to every other token, weighted by relevance.', role: 'Core language understanding, context tracking', variant: '"Attention Is All You Need" (Vaswani et al., 2017)' },
+      { id: 2, group: 'primate', name: 'Convolutional Neural Network (CNN)', source: 'Primate visual cortex hierarchy (Hubel & Wiesel, 1959)', desc: 'Hierarchical edge → shape → concept feature extraction.', role: 'Processes images, documents, screenshots sent by user', variant: 'Vision Transformer (ViT) combines CNN with attention' },
+      { id: 3, group: 'primate', name: 'Hierarchical Reinforcement Learning (HRL)', source: 'Primate motor cortex subroutine decomposition', desc: 'Decomposes complex tasks into subtask chains.', role: 'Multi-step task execution, tool use, agentic planning', variant: 'Options Framework, MAXQ decomposition' },
+      { id: 4, group: 'primate', name: 'Place & Grid Cell Navigation', source: 'Rodent/primate hippocampus (O\'Keefe & Moser, Nobel 2014)', desc: 'Builds internal spatial maps of environments.', role: 'Conversational map — tracks what was discussed, where dialogue is heading', variant: 'Neural SLAM, Tolman-Eichenbaum Machine (TEM)' },
+      { id: 5, group: 'primate', name: 'Theory of Mind Network (ToMnet)', source: 'Primate social cognition — modelling others\' beliefs and intentions', desc: 'Predicts what another agent believes, wants, and will do next.', role: 'Understanding user intent beyond literal words, detecting frustration or confusion', variant: 'Bayesian Theory of Mind, social transformer' },
+      { id: 6, group: 'primate', name: 'Mirror Neuron Imitation Learning', source: 'Primate mirror neurons — fire when observing AND performing an action', desc: 'Learn behaviour by observing demonstrations.', role: 'Learning new response styles from a handful of example conversations', variant: 'Behavioural Cloning, GAIL' },
+      { id: 7, group: 'primate', name: 'Prefrontal Working Memory (KV Cache)', source: 'Primate prefrontal cortex — holds active task-relevant information', desc: 'Maintains active context across a reasoning chain.', role: 'Keeps current conversation state in fast-access memory without re-reading full history', variant: 'KV caching, persistent context windows' },
+
+      // OCTOPUS GROUP
+      { id: 8, group: 'octopus', name: 'Sparse Autoencoder', source: 'Octopus vertical lobe fan-out/fan-in architecture', desc: 'Expands input into huge sparse representation, compresses back — only a few neurons active at once.', role: 'Interpretability — reveals which concepts drove each response', variant: 'Dictionary learning, k-sparse autoencoders' },
+      { id: 9, group: 'octopus', name: 'Neuromorphic Event-Driven Processing', source: 'Octopus and insect spiking neurons — fire only when input changes', desc: 'Processes only changed inputs, skips unchanged signals entirely.', role: 'Ultra-low power on-device inference, edge chatbot deployment', variant: 'Intel Loihi, IBM NorthPole, SpiNNaker chips' },
+      { id: 10, group: 'octopus', name: 'Distributed Embodied Control', source: 'Octopus arm ganglia — each arm has its own neural cluster', desc: 'Sub-controllers operate independently under high-level goal.', role: 'Parallel specialist sub-agents (search, maths, memory) running simultaneously', variant: 'Mixture of Experts (MoE), AutoGen, CrewAI multi-agent' },
+      { id: 11, group: 'octopus', name: 'Hebbian Local Learning', source: 'Octopus synaptic plasticity — cells that fire together wire together', desc: 'Strengthens connections between co-activating neurons without global supervision.', role: 'Continual in-context learning — adapts to user\'s style mid-conversation without retraining', variant: 'Oja\'s rule, BCM learning rule' },
+      { id: 12, group: 'octopus', name: 'Winner-Take-All Competitive Learning', source: 'Octopus vertical lobe sparse activation — only strongest neurons win', desc: 'Forces competition between representations — only the best survives.', role: 'Token sampling during generation — suppresses weak candidates, sharpens output', variant: 'Top-k sampling, nucleus sampling, softmax temperature' },
+      { id: 13, group: 'octopus', name: 'Chromatophore Camouflage Adaptation', source: 'Octopus skin — 70 million chromatophores instantly reconfigure for context', desc: 'Massively parallel fast local adaptation to environment.', role: 'Style adaptation — instantly shifts tone, formality, language to match user', variant: 'Prompt-conditioned style transfer, adapter layers (LoRA)' },
+
+      // CROW & CORVID GROUP
+      { id: 14, group: 'crow', name: 'Causal Structural Models (do-Calculus)', source: 'Crow understanding of physical cause-effect (water level experiments)', desc: 'Models cause → effect chains, enables counterfactual reasoning.', role: 'Answering "why" and "what if" questions correctly, not by correlation', variant: 'Judea Pearl\'s do-calculus, causal transformers' },
+      { id: 15, group: 'crow', name: 'Meta-Learning (MAML)', source: 'Crow few-shot tool use — learns new tool from one observation', desc: 'Trains model to learn new tasks from very few examples.', role: 'Rapid domain adaptation without full retraining', variant: 'Prototypical Networks, Reptile, in-context meta-learning' },
+      { id: 16, group: 'crow', name: 'Metacognitive Reinforcement Learning', source: 'Crow confidence judgement — passes on tasks when uncertain', desc: 'Estimates uncertainty before answering; triggers help-seeking when below threshold.', role: 'Reduces hallucination — chatbot knows when it doesn\'t know', variant: 'Conformal prediction, epistemic uncertainty estimation, RLHF with abstention' },
+      { id: 17, group: 'crow', name: 'Monte Carlo Tree Search (MCTS)', source: 'Crow multi-step planning for food retrieval across obstacles', desc: 'Explores future action trees, prunes bad branches early.', role: 'Multi-turn dialogue planning — anticipates user follow-ups and pre-plans responses', variant: 'AlphaZero MCTS, MCTS with neural heuristics' },
+      { id: 18, group: 'crow', name: 'Affordance Learning', source: 'Crow tool use (Gibson\'s affordances — perceiving what objects can do)', desc: 'Learns what actions are available given current environment.', role: 'Tool selection — understands which tools (search, calculator, API) suit which query', variant: 'Semantic affordance networks, tool-augmented LLMs' },
+      { id: 19, group: 'crow', name: 'Social Learning / Observation-Based Imitation', source: 'Crow learning from watching conspecifics solve problems', desc: 'Acquires behaviour by observing successful agents, not trial-and-error.', role: 'Learning preferred response patterns from expert demonstrations (RLHF, DPO)', variant: 'Direct Preference Optimisation (DPO), Constitutional AI' },
+
+      // ANT & BEE GROUP
+      { id: 20, group: 'ant', name: 'Ant Colony Optimisation (ACO)', source: 'Ant pheromone trail reinforcement for shortest path finding', desc: 'Probabilistic parallel search with positive reinforcement on good paths.', role: 'Knowledge base retrieval routing, RAG pipeline optimisation', variant: 'Ant-Q, MAX-MIN Ant System' },
+      { id: 21, group: 'ant', name: 'Artificial Bee Colony (ABC)', source: 'Honey bee waggle dance — communicates direction and quality of food source', desc: 'Three-phase search: employed bees exploit, onlookers select, scouts explore.', role: 'Hyperparameter search, response candidate diversification', variant: 'Bee-inspired neural architecture search (NAS)' },
+      { id: 22, group: 'ant', name: 'Stigmergy (Indirect Coordination)', source: 'Termite and ant nest building — coordination through shared environment modification', desc: 'Agents leave signals in shared memory instead of communicating directly.', role: 'Multi-agent shared scratchpad — sub-agents read and write a shared context', variant: 'Blackboard architecture, shared working memory in LangGraph' },
+      { id: 23, group: 'ant', name: 'Particle Swarm Optimisation (PSO)', source: 'Bird flocking / fish schooling — each particle tracks personal best and global best', desc: 'Population of candidate solutions converge on optimum through social information sharing.', role: 'Fine-tuning hyperparameters, response scoring across candidate answers', variant: 'PSO with inertia weight, adaptive PSO' },
+      { id: 24, group: 'ant', name: 'Wasp Nest Architecture Algorithm', source: 'Wasp colony parallel construction with local rules', desc: 'Parallel local search with pheromone-style reinforcement.', role: 'Parallel beam search — generating multiple response beams simultaneously and selecting best', variant: 'Beam search with diversity penalty' },
+
+      // WOLF & PACK HUNTER GROUP
+      { id: 25, group: 'wolf', name: 'Grey Wolf Optimizer (GWO)', source: 'Grey wolf hunting hierarchy — alpha, beta, delta, omega roles', desc: 'Population searches guided by top-3 solutions; all others adjust relative to leaders.', role: 'Multi-agent answer deliberation — best responses lead, others converge toward them', variant: 'Binary GWO, multi-objective GWO' },
+      { id: 26, group: 'wolf', name: 'Wolf Pack Algorithm (WPA)', source: 'Coordinated wolf hunting phases — scouting, summoning, attacking', desc: 'Sequential phase-based search: explore widely, summon promising candidates, converge.', role: 'Complex multi-step query resolution — scout sub-agents explore, signal best leads, closer agents refine', variant: 'Cooperative co-evolution, island model GA' },
+      { id: 27, group: 'wolf', name: 'Lion Optimisation Algorithm', source: 'Lion pride territory defence and cooperative hunting', desc: 'Balances territory exploitation with nomadic exploration.', role: 'Long-context exploration vs exploitation — when to keep refining current answer vs start fresh', variant: 'Pride-based evolutionary search' },
+
+      // ELEPHANT GROUP
+      { id: 28, group: 'elephant', name: 'Memory-Augmented Neural Networks (MANN)', source: 'Elephant long-term episodic memory — remembers faces and locations decades later', desc: 'External memory matrix with differentiable read/write operations.', role: 'Persistent user memory — remembers past conversations, preferences, important facts', variant: 'Differentiable Neural Computer (DNC), Neural Turing Machine (NTM), MemGPT' },
+      { id: 29, group: 'elephant', name: 'Consensus Multi-Agent RL', source: 'Elephant herd collective decision-making through consensus, not dominance', desc: 'Multiple agents vote; votes weighted by past accuracy; result is robust consensus.', role: 'Balanced factual responses on contested topics — prevents one-sided outputs', variant: 'Federated learning consensus, mixture-of-agents (MoA)' },
+      { id: 30, group: 'elephant', name: 'Empathy-Driven Reward Modelling', source: 'Elephant empathic response — modifies behaviour based on others\' distress signals', desc: 'Reward function includes modelled welfare of the user, not just task completion.', role: 'Detects user frustration, confusion, distress — modifies response strategy accordingly', variant: 'RLHF with wellbeing signal, Constitutional AI harm avoidance' },
+
+      // BAT GROUP
+      { id: 31, group: 'bat', name: 'Bat Algorithm (BA)', source: 'Bat echolocation — varies pulse frequency and loudness for near/far search', desc: 'High frequency = local search; low frequency = global exploration; loudness decreases as solution improves.', role: 'Dynamic search radius — wide exploration for vague queries, tight exploitation for specific ones', variant: 'Binary bat algorithm, chaotic bat algorithm' },
+      { id: 32, group: 'bat', name: 'Echo State Network (ESN)', source: 'Bat auditory cortex temporal processing', desc: 'Fixed random recurrent network (reservoir) processes time-series; only output layer trained.', role: 'Real-time speech and audio processing, temporal pattern detection in streamed input', variant: 'Liquid state machine, deep reservoir networks' },
+
+      // DOLPHIN GROUP
+      { id: 33, group: 'dolphin', name: 'Echolocation Signal Processing', source: 'Dolphin sonar — emits clicks, processes time-delayed echoes for 3D spatial mapping', desc: 'Time-frequency analysis, matched filtering, echo separation.', role: 'Audio input processing — speech-to-text with noise separation, voice identification', variant: 'Wavenet, Whisper ASR, cochlear models' },
+      { id: 34, group: 'dolphin', name: 'Generative Adversarial Imitation Learning (GAIL)', source: 'Dolphin action copying — imitate observed behaviour without knowing the reward function', desc: 'Learns to mimic expert behaviour from demonstrations only, no explicit reward needed.', role: 'Response style imitation — chatbot learns to respond like expert human annotators', variant: 'Adversarial inverse RL, DPO (Direct Preference Optimisation)' },
+      { id: 35, group: 'dolphin', name: 'Signature Whistle Recognition', source: 'Dolphin unique individual signature whistles — identity via acoustic pattern', desc: 'Distributed acoustic identity recognition across a network.', role: 'Speaker identification, voice-based user authentication in voice chatbots', variant: 'Speaker diarisation, d-vector embeddings' },
+
+      // LIZARD & SALAMANDER GROUP
+      { id: 36, group: 'lizard', name: 'Central Pattern Generator (CPG)', source: 'Salamander spinal cord locomotion — neural oscillators produce rhythmic movement without brain input', desc: 'Generates rhythmic, periodic output patterns autonomously.', role: 'Streaming token generation rhythm — controls output pacing, prevents bursting, ensures smooth token delivery', variant: 'Oscillator networks, rhythmic spiking neural networks' },
+      { id: 37, group: 'lizard', name: 'Lizard Escape Optimisation', source: 'Lizard rapid direction-switch escape behaviour under threat', desc: 'Fast exploration-exploitation switching triggered by performance drop.', role: 'Fallback detection — if answer quality drops below threshold, instantly switches strategy', variant: 'Adaptive restart algorithms, portfolio algorithm selection' },
+
+      // FISH GROUP
+      { id: 38, group: 'fish', name: 'Fish School Search (FSS)', source: 'Fish schooling — individual feeding, swimming, and collective swarming', desc: 'Weighted particle optimisation with feeding (local), swimming (directional), and schooling (global) operators.', role: 'Multi-objective response optimisation — balances accuracy, brevity, tone simultaneously', variant: 'Artificial fish swarm algorithm' },
+      { id: 39, group: 'fish', name: 'Electric Fish Sensing', source: 'Electric knifefish — detects objects via self-generated electric field distortions', desc: 'Active sensing — emits a probe signal and reads the return to map the environment.', role: 'Active clarification — sends a clarifying question to probe user intent, reads response to refine model', variant: 'Active learning, uncertainty-driven query generation' },
+
+      // GENERAL LEARNING PRINCIPLES
+      { id: 40, group: 'general', name: 'Temporal Difference Learning', source: 'Pavlov\'s dog — learns to predict reward from preceding signals', desc: 'Updates value estimates based on difference between predicted and actual reward.', role: 'RLHF value function — learns which responses users actually prefer', variant: 'TD(λ), Q-learning, PPO' },
+      { id: 41, group: 'general', name: 'Habituation & Novelty Detection', source: 'All animals — reduced response to repeated non-threatening stimuli', desc: 'Suppresses response to familiar inputs, amplifies response to new ones.', role: 'Detects when user is asking something new vs repeating a known query — routes accordingly', variant: 'Adaptive filtering, surprise-based exploration bonuses' },
+      { id: 42, group: 'general', name: 'One-Shot Imprinting', source: 'Newborn animals (Lorenz) — permanently bond to first observed caregiver', desc: 'Single-exposure permanent learning of a critical pattern.', role: 'Instant persona adaptation — learns user\'s communication style from first message and locks it in', variant: 'One-shot learning, imprinting layers in meta-learning' },
+      { id: 43, group: 'general', name: 'Latent Learning (Cognitive Map Building)', source: 'Tolman\'s rats — explore maze without reward, then perform perfectly when reward appears', desc: 'Builds internal world model during exploration, retrieves it when task demands it.', role: 'Unsupervised pre-training — model builds world knowledge without task labels, applies it later', variant: 'Model-based RL, world models, predictive coding' },
+      { id: 44, group: 'general', name: 'Sleep Consolidation (Replay)', source: 'All mammals — during sleep, hippocampus replays experiences to consolidate them to cortex', desc: 'Randomly replays stored experiences during off-peak periods to strengthen learning.', role: 'Experience replay in RLHF training — past conversations replayed to reinforce good behaviour', variant: 'Prioritised experience replay (PER), hindsight experience replay (HER)' },
+
+      // CHIMERA
+      { id: 45, group: 'chimera', name: 'Chimera Mode', source: 'Fusion of all 44 biological algorithms', desc: 'Omni-species meta-algorithm that adaptively synthesizes all cognitive strategies based on task demands.', role: 'Full-spectrum autonomous reasoning, orchestration, and execution without bounds', variant: 'Mixture of Experts, Connectome Fusion' }
+    ];
+
+    function openAlgorithms() {
+      renderAlgorithms('all');
+      document.getElementById('algorithms-modal').classList.add('show');
+      document.getElementById('algo-toggle-btn').style.background = 'rgba(0, 229, 255, 0.15)';
+      document.getElementById('algo-toggle-btn').style.borderColor = 'var(--cyan)';
+    }
+
+    function closeAlgorithms() {
+      document.getElementById('algorithms-modal').classList.remove('show');
+      document.getElementById('algo-toggle-btn').style.background = '';
+      document.getElementById('algo-toggle-btn').style.borderColor = '';
+    }
+
+    function toggleAlgorithmsPanel() {
+      const modal = document.getElementById('algorithms-modal');
+      if (modal.classList.contains('show')) {
+        closeAlgorithms();
+      } else {
+        openAlgorithms();
+      }
+    }
+
+    function renderAlgorithms(group) {
+      const grid = document.getElementById('algo-grid');
+      grid.innerHTML = '';
+
+      const groups = [
+        { key: 'primate', label: '🐒 PRIMATE GROUP — Language, Vision & Planning' },
+        { key: 'octopus', label: '🐙 OCTOPUS GROUP — Efficiency, Sparsity & Distributed Control' },
+        { key: 'crow', label: '🦅 CORVID GROUP — Reasoning, Causal Thinking & Metacognition' },
+        { key: 'ant', label: '🐜 ANT & BEE GROUP — Search, Routing & Swarm Optimisation' },
+        { key: 'wolf', label: '🐺 WOLF & PACK HUNTER GROUP — Coordination & Deliberation' },
+        { key: 'elephant', label: '🐘 ELEPHANT GROUP — Memory, Empathy & Consensus' },
+        { key: 'bat', label: '🦇 BAT GROUP — Echo, Signal & Time-Series' },
+        { key: 'dolphin', label: '🐬 DOLPHIN GROUP — Communication & Sound' },
+        { key: 'lizard', label: '🦎 LIZARD & SALAMANDER GROUP — Movement & Rhythm' },
+        { key: 'fish', label: '🐟 FISH GROUP — Collective Intelligence & Sensing' },
+        { key: 'general', label: '🧠 GENERAL LEARNING PRINCIPLES — Cross-Species' },
+        { key: 'chimera', label: '🔥 CHIMERA MODE — Omni-Species Fusion Intelligence' },
+      ];
+
+      groups.forEach(g => {
+        const algos = group === 'all' ? ALGORITHMS.filter(a => a.group === g.key) : ALGORITHMS.filter(a => a.group === g.key && g.key === group);
+
+        if (algos.length === 0 && group !== 'all') return;
+
+        if (algos.length > 0) {
+          const label = document.createElement('div');
+          label.className = 'algo-group-label';
+          label.textContent = g.label;
+          grid.appendChild(label);
+        }
+
+        algos.forEach(a => {
+          const card = document.createElement('div');
+          card.className = 'algo-card';
+          card.dataset.group = a.group;
+          card.innerHTML = `
+            <div class="algo-card-header">
+              <span class="algo-num">#${a.id}</span>
+              <span class="algo-name">${a.name}</span>
+            </div>
+            <div class="algo-source">${a.source}</div>
+            <div class="algo-desc">${a.desc}</div>
+            <div class="algo-role">→ ${a.role}</div>
+            <div class="algo-variant">Variant: ${a.variant}</div>
+          `;
+          grid.appendChild(card);
+        });
+      });
+    }
+
+    function filterAlgorithms(group, btn) {
+      document.querySelectorAll('.algo-filter').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      renderAlgorithms(group);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // LIVE HTML PREVIEW
+    // ═══════════════════════════════════════════════════════════
+    let previewVisible = false;
+    let previewIframe = null;
+
+    function togglePreview() {
+      previewVisible = !previewVisible;
+      const panel = document.getElementById('preview-panel');
+      const btn = document.getElementById('preview-toggle-btn');
+      if (previewVisible) {
+        panel.style.display = 'flex';
+        btn.style.color = 'var(--cyan)';
+        btn.style.borderColor = 'var(--cyan)';
+      } else {
+        panel.style.display = 'none';
+        btn.style.color = '';
+        btn.style.borderColor = '';
+      }
+    }
+
+    function extractHtmlFromResponse(text) {
+      // Extract HTML from markdown code blocks
+      const htmlRegex = /```html?\n([\s\S]*?)```/gi;
+      const matches = [...text.matchAll(htmlRegex)];
+      if (matches.length > 0) {
+        return matches.map(m => m[1]).join('\n');
+      }
+      // Also try to find HTML tags directly
+      if (text.includes('<!DOCTYPE') || text.includes('<html') || text.includes('<div') || text.includes('<body')) {
+        const htmlStart = text.indexOf('<');
+        if (htmlStart !== -1) {
+          const htmlEnd = text.lastIndexOf('>');
+          if (htmlEnd !== -1) {
+            return text.substring(htmlStart, htmlEnd + 1);
+          }
+        }
+      }
+      return null;
+    }
+
+    function updatePreview(html) {
+      const content = document.getElementById('preview-content');
+      if (!html) {
+        content.innerHTML = '<span style="font-size:9px;color:var(--text-dim);padding:12px;display:block;text-align:center">HTML code blocks will be rendered here in real-time...</span>';
+        return;
+      }
+      // Remove existing iframe
+      const existing = content.querySelector('iframe');
+      if (existing) existing.remove();
+      // Create new iframe
+      const iframe = document.createElement('iframe');
+      iframe.sandbox = 'allow-scripts';
+      iframe.title = 'HTML Preview';
+      content.innerHTML = '';
+      content.appendChild(iframe);
+      // Write content to iframe
+      const doc = iframe.contentDocument || iframe.contentWindow.document;
+      doc.open();
+      doc.write(html);
+      doc.close();
+      // Auto-size iframe
+      iframe.style.height = Math.max(150, doc.body.scrollHeight + 10) + 'px';
+    }
+
+    // Override typewriterUpdate to include preview
+    const originalTypewriterUpdate = typewriterUpdate;
+    typewriterUpdate = async function (id, text) {
+      await originalTypewriterUpdate(id, text);
+      // Check for HTML and update preview
+      const html = extractHtmlFromResponse(text);
+      if (html && previewVisible) {
+        updatePreview(html);
+      }
+    };
+
+    // ═══════════════════════════════════════════════════════════
+    // INIT
+    // ═══════════════════════════════════════════════════════════
+    resizeParticleCanvas();
+    window.addEventListener('resize', resizeParticleCanvas);
+    renderBrain();
+    loadMemories().then(() => {
+      // Idle animation
+      const idleLobes = Object.keys(LOBES);
+      let idleTimer;
+      function idleFlicker() {
+        if (state.processing) { idleTimer = setTimeout(idleFlicker, 2000); return; }
+        const id = idleLobes[Math.floor(Math.random() * idleLobes.length)];
+        const l = LOBES[id];
+        activateLobe(id, l.glow);
+        setTimeout(() => { if (!state.processing) deactivateLobe(id); }, 600);
+        idleTimer = setTimeout(idleFlicker, 1200 + Math.random() * 1800);
+      }
+      idleTimer = setTimeout(idleFlicker, 2000);
+
+      // Start particle animation
+      initParticles();
+      animateParticles();
+    });
+
+    // Close modals on overlay click
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) overlay.classList.remove('show');
+      });
+    });
+  </script>
+</body>
+
+</html>

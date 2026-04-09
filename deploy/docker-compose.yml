@@ -11,13 +11,14 @@ services:
     container_name: maranet-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-maranet}
-      POSTGRES_USER: ${POSTGRES_USER:-maranet}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-maranet_secret}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    # PostgreSQL should NOT be exposed to internet in production
+    # ports:
+    #   - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U maranet"]
       interval: 10s
@@ -33,13 +34,14 @@ services:
     image: redis:7-alpine
     container_name: maranet-redis
     restart: unless-stopped
-    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    command: redis-server --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required} --maxmemory 256mb --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
-    ports:
-      - "6379:6379"
+    # Redis should NOT be exposed to internet in production
+    # ports:
+    #   - "6379:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -64,9 +66,9 @@ services:
       NODE_ENV: production
       PORT: 3000
       HOST: 0.0.0.0
-      DATABASE_URL: postgresql://${POSTGRES_USER:-maranet}:${POSTGRES_PASSWORD:-maranet_secret}@postgres:5432/${POSTGRES_DB:-maranet}?schema=public
-      REDIS_URL: redis://redis:6379
-      JWT_SECRET: ${JWT_SECRET:-change-this-in-production-to-a-random-secret}
+      DATABASE_URL: postgresql://${POSTGRES_USER:?POSTGRES_USER is required}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}?schema=public
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       JWT_EXPIRES_IN: 7d
       GRPC_PORT: 50051
       GRPC_HOST: 0.0.0.0
@@ -77,8 +79,8 @@ services:
       MPESA_BUSINESS_SHORT_CODE: ${MPESA_BUSINESS_SHORT_CODE:-174379}
       MPESA_PASS_KEY: ${MPESA_PASS_KEY:-}
       MPESA_CALLBACK_URL: ${MPESA_CALLBACK_URL:-https://api.maranet.app/api/v1/payments/mpesa/callback}
-      MPESA_ENVIRONMENT: ${MPESA_ENVIRONMENT:-sandbox}
-      MPESA_BASE_URL: ${MPESA_BASE_URL:-https://sandbox.safaricom.co.ke}
+      MPESA_ENVIRONMENT: ${MPESA_ENVIRONMENT:-production}
+      MPESA_BASE_URL: ${MPESA_BASE_URL:-https://api.safaricom.co.ke}
       LOG_LEVEL: info
     ports:
       - "3000:3000"
@@ -126,7 +128,7 @@ services:
       WG_INTERFACE: wg0
       WG_LISTEN_PORT: 51820
       WG_ADDRESS: 10.0.0.1/16
-      WG_PRIVATE_KEY: ${GATEWAY_WG_PRIVATE_KEY:-}
+      WG_PRIVATE_KEY: ${GATEWAY_WG_PRIVATE_KEY:?GATEWAY_WG_PRIVATE_KEY is required}
       GRPC_HOST: 0.0.0.0
       GRPC_PORT: 50052
       NAT_EXTERNAL_INTERFACE: eth0
@@ -150,8 +152,9 @@ services:
       - ../monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
       - ../monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml
       - prometheus_data:/prometheus
-    ports:
-      - "9090:9090"
+    # Prometheus should be internal only
+    # ports:
+    #   - "9090:9090"
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -171,14 +174,15 @@ services:
       - prometheus
     environment:
       GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-maranet-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?GRAFANA_PASSWORD is required}
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s:%(http_port)s/grafana/"
     volumes:
       - ../monitoring/grafana/provisioning:/etc/grafana/provisioning
       - grafana_data:/var/lib/grafana
-    ports:
-      - "3001:3000"
+    # Grafana should be behind authentication and internal
+    # ports:
+    #   - "3001:3000"
     networks:
       - maranet-net
 
@@ -189,12 +193,38 @@ services:
     image: grafana/loki:2.9.4
     container_name: maranet-loki
     restart: unless-stopped
-    ports:
-      - "3100:3100"
+    # Loki should be internal only
+    # ports:
+    #   - "3100:3100"
     volumes:
       - loki_data:/loki
     networks:
       - maranet-net
+
+  # ============================================================
+  # Alertmanager
+  # ============================================================
+  alertmanager:
+    image: prom/alertmanager:v0.26.0
+    container_name: maranet-alertmanager
+    restart: unless-stopped
+    volumes:
+      - ../monitoring/prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - alertmanager_data:/alertmanager
+    # Alertmanager should be internal only
+    # ports:
+    #   - "9094:9093"
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--cluster.listen-address='
+    networks:
+      - maranet-net
+    environment:
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
 
 # ============================================================
 # Volumes
@@ -209,6 +239,8 @@ volumes:
   grafana_data:
     driver: local
   loki_data:
+    driver: local
+  alertmanager_data:
     driver: local
 
 # ============================================================

@@ -116,6 +116,8 @@ Environment variables for the agent:
 |----------|---------|-------------|
 | `DEVICE_ID` | `node-001` | Unique identifier for your node |
 | `SERVER_ADDRESS` | `localhost:50051` | Main server gRPC address |
+| `SERVER_USE_TLS` | `false` | Enable TLS for gRPC connection to the main server |
+| `SERVER_CERT_FILE` | | Path to the CA or server certificate for gRPC TLS validation |
 | `PLATFORM` | `rpi` | Platform type: rpi, vps, android |
 | `WG_INTERFACE` | `wg0` | WireGuard interface name |
 | `WG_LISTEN_PORT` | `51820` | WireGuard listen port |

@@ -25,8 +25,12 @@ type WireGuardConfig struct {
 }
 
 type GRPCConfig struct {
-	Host string
-	Port int
+	Host     string
+	Port     int
+	UseTLS   bool
+	CertFile string
+	KeyFile  string
+	CAFile   string
 }
 
 type NATConfig struct {
@@ -52,8 +56,12 @@ func Load() *Config {
 			PersistentKeepalive: getEnvInt("WG_PERSISTENT_KEEPALIVE", 25),
 		},
 		GRPC: GRPCConfig{
-			Host: getEnv("GRPC_HOST", "0.0.0.0"),
-			Port: getEnvInt("GRPC_PORT", 50052),
+			Host:     getEnv("GRPC_HOST", "0.0.0.0"),
+			Port:     getEnvInt("GRPC_PORT", 50052),
+			UseTLS:   getEnvBool("GRPC_USE_TLS", false),
+			CertFile: getEnv("GRPC_TLS_CERT_FILE", ""),
+			KeyFile:  getEnv("GRPC_TLS_KEY_FILE", ""),
+			CAFile:   getEnv("GRPC_TLS_CA_FILE", ""),
 		},
 		NAT: NATConfig{
 			ExternalInterface: getEnv("NAT_EXTERNAL_INTERFACE", "eth0"),

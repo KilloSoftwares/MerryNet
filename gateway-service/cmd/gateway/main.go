@@ -89,7 +89,11 @@ func main() {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 
-	grpcSrv := grpcserver.NewServer(wgManager, natManager)
+	grpcSrv, err := grpcserver.NewServer(&cfg.GRPC, wgManager, natManager)
+	if err != nil {
+		log.Fatalf("Failed to initialize gRPC server: %v", err)
+	}
+
 	go func() {
 		log.Infof("🔌 gRPC server listening on %s:%d", cfg.GRPC.Host, cfg.GRPC.Port)
 		if err := grpcSrv.Serve(lis); err != nil {

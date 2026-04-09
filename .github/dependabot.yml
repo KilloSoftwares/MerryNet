@@ -1,0 +1,119 @@
+# ============================================================
+# Maranet Zero — Dependabot Configuration
+# ============================================================
+# Automated dependency updates for security and maintenance
+# ============================================================
+
+version: 2
+updates:
+  # NPM dependencies (Node.js)
+  - package-ecosystem: "npm"
+    directory: "/main-server"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Africa/Nairobi"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "KilloSoftwares"
+    labels:
+      - "dependencies"
+      - "security"
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      production-dependencies:
+        dependency-type: "production"
+      development-dependencies:
+        dependency-type: "development"
+
+  # NPM dependencies (Dashboard)
+  - package-ecosystem: "npm"
+    directory: "/merry-net-dashboard"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Africa/Nairobi"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "dashboard"
+    commit-message:
+      prefix: "chore(deps-dashboard)"
+
+  # Go dependencies (Gateway)
+  - package-ecosystem: "gomod"
+    directory: "/gateway-service"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Africa/Nairobi"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "gateway"
+    commit-message:
+      prefix: "chore(deps-gateway)"
+
+  # Go dependencies (Reseller Agent)
+  - package-ecosystem: "gomod"
+    directory: "/reseller-agent"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Africa/Nairobi"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "reseller-agent"
+    commit-message:
+      prefix: "chore(deps-agent)"
+
+  # Rust dependencies (Bootstrap API)
+  - package-ecosystem: "cargo"
+    directory: "/bootstrap-api"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Africa/Nairobi"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "bootstrap"
+    commit-message:
+      prefix: "chore(deps-bootstrap)"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Africa/Nairobi"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "ci-cd"
+    commit-message:
+      prefix: "chore(ci)"
+
+  # Docker images
+  - package-ecosystem: "docker"
+    directory: "/main-server"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Africa/Nairobi"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "chore(docker)"

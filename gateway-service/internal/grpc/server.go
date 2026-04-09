@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net"
 	"time"
@@ -9,37 +10,56 @@ import (
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/KilloSoftwares/MerryNet/gateway-service/internal/config"
 	"github.com/KilloSoftwares/MerryNet/gateway-service/internal/nat"
+	maranetpb "github.com/KilloSoftwares/MerryNet/gateway-service/internal/pb/proto"
 	"github.com/KilloSoftwares/MerryNet/gateway-service/internal/wireguard"
 )
 
 // Server implements the GatewayService gRPC server
 type Server struct {
+	maranetpb.UnimplementedGatewayServiceServer
 	grpcServer *grpc.Server
 	wgManager  *wireguard.Manager
 	natManager *nat.Manager
 }
 
 // NewServer creates a new gRPC server
-func NewServer(wg *wireguard.Manager, natMgr *nat.Manager) *Server {
+func NewServer(cfg *config.GRPCConfig, wg *wireguard.Manager, natMgr *nat.Manager) (*Server, error) {
+	opts := []grpc.ServerOption{
+		grpc.UnaryInterceptor(loggingInterceptor),
+	}
+
+	if cfg.UseTLS {
+		if cfg.CertFile == "" || cfg.KeyFile == "" {
+			return nil, fmt.Errorf("GRPC_USE_TLS enabled but GRPC_TLS_CERT_FILE or GRPC_TLS_KEY_FILE is missing")
+		}
+
+		cert, err := tls.LoadX509KeyPair(cfg.CertFile, cfg.KeyFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load TLS certificate: %w", err)
+		}
+
+		creds := credentials.NewServerTLSFromCert(&cert)
+		opts = append(opts, grpc.Creds(creds))
+		log.Info("🔒 gRPC TLS enabled for gateway service")
+	}
+
+	grpcServer := grpc.NewServer(opts...)
+
 	s := &Server{
+		grpcServer: grpcServer,
 		wgManager:  wg,
 		natManager: natMgr,
 	}
 
-	grpcServer := grpc.NewServer(
-		grpc.UnaryInterceptor(loggingInterceptor),
-	)
-
-	// Register the gateway service
-	// Note: In production, register the generated protobuf service here
-	// pb.RegisterGatewayServiceServer(grpcServer, s)
-
-	s.grpcServer = grpcServer
-	return s
+	maranetpb.RegisterGatewayServiceServer(grpcServer, s)
+	return s, nil
 }
 
 // Serve starts the gRPC server
@@ -53,33 +73,38 @@ func (s *Server) GracefulStop() {
 }
 
 // AddTunnel handles adding a new node tunnel
-func (s *Server) AddTunnel(ctx context.Context, nodeID, publicKey, endpoint, subnet string) error {
-	// Add WireGuard tunnel
-	if err := s.wgManager.AddTunnel(nodeID, publicKey, endpoint, subnet); err != nil {
-		return fmt.Errorf("failed to add WireGuard tunnel: %w", err)
+func (s *Server) AddTunnel(ctx context.Context, req *maranetpb.AddTunnelRequest) (*maranetpb.AddTunnelResponse, error) {
+	if err := s.wgManager.AddTunnel(req.NodeId, req.NodePublicKey, req.NodeEndpoint, req.AssignedSubnet); err != nil {
+		return &maranetpb.AddTunnelResponse{Success: false, Error: err.Error()}, nil
 	}
 
-	// Add NAT forwarding
-	if err := s.natManager.AddNodeForwarding(subnet); err != nil {
-		log.Warnf("Failed to add NAT forwarding for %s: %v", subnet, err)
+	gatewayKey, err := s.wgManager.GetPublicKey()
+	if err != nil {
+		return &maranetpb.AddTunnelResponse{Success: true, GatewayEndpoint: "", Error: "tunnel added but failed to read gateway key"}, nil
 	}
 
-	return nil
+	return &maranetpb.AddTunnelResponse{
+		Success:         true,
+		GatewayPublicKey: gatewayKey,
+		GatewayEndpoint:  "",
+	}, nil
 }
 
 // RemoveTunnel handles removing a node tunnel
-func (s *Server) RemoveTunnel(ctx context.Context, nodeID, publicKey string) error {
-	// Get tunnel info for subnet
-	tunnel, ok := s.wgManager.GetTunnel(nodeID)
-	if ok {
+func (s *Server) RemoveTunnel(ctx context.Context, req *maranetpb.RemoveTunnelRequest) (*maranetpb.RemoveTunnelResponse, error) {
+	if tunnel, ok := s.wgManager.GetTunnel(req.NodeId); ok {
 		s.natManager.RemoveNodeForwarding(tunnel.Subnet)
 	}
 
-	return s.wgManager.RemoveTunnel(nodeID, publicKey)
+	if err := s.wgManager.RemoveTunnel(req.NodeId, req.NodePublicKey); err != nil {
+		return &maranetpb.RemoveTunnelResponse{Success: false, Error: err.Error()}, nil
+	}
+
+	return &maranetpb.RemoveTunnelResponse{Success: true}, nil
 }
 
 // GetStatus returns current gateway status
-func (s *Server) GetStatus(ctx context.Context) (map[string]interface{}, error) {
+func (s *Server) GetStatus(ctx context.Context, _ *emptypb.Empty) (*maranetpb.GatewayStatus, error) {
 	dev, err := s.wgManager.GetDeviceInfo()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get device info: %v", err)
@@ -91,13 +116,34 @@ func (s *Server) GetStatus(ctx context.Context) (map[string]interface{}, error) 
 		totalTx += peer.TransmitBytes
 	}
 
-	return map[string]interface{}{
-		"active_tunnels": s.wgManager.GetTunnelCount(),
-		"total_peers":    len(dev.Peers),
-		"total_rx":       totalRx,
-		"total_tx":       totalTx,
-		"listen_port":    dev.ListenPort,
-		"public_key":     dev.PublicKey.String(),
+	return &maranetpb.GatewayStatus{
+		ActiveTunnels: int32(s.wgManager.GetTunnelCount()),
+		TotalBytesRx:  totalRx,
+		TotalBytesTx:  totalTx,
+		CpuUsage:      0,
+		MemoryUsage:   0,
+		UptimeSince:   timestamppb.Now(),
+	}, nil
+}
+
+// GetTunnelStats returns statistics for a specific tunnel
+func (s *Server) GetTunnelStats(ctx context.Context, req *maranetpb.TunnelStatsRequest) (*maranetpb.TunnelStatsResponse, error) {
+	tunnel, ok := s.wgManager.GetTunnel(req.NodeId)
+	if !ok {
+		return nil, status.Errorf(codes.NotFound, "tunnel not found for node %s", req.NodeId)
+	}
+
+	peer, err := s.wgManager.GetPeerStats(tunnel.PublicKey.String())
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get peer stats: %v", err)
+	}
+
+	return &maranetpb.TunnelStatsResponse{
+		NodeId:        req.NodeId,
+		BytesRx:       peer.ReceiveBytes,
+		BytesTx:       peer.TransmitBytes,
+		LastHandshake: timestamppb.New(peer.LastHandshakeTime),
+		Connected:     true,
 	}, nil
 }
 
@@ -126,9 +172,4 @@ func loggingInterceptor(
 	}
 
 	return resp, err
-}
-
-// Helper to create a timestamp proto
-func nowTimestamp() *timestamppb.Timestamp {
-	return timestamppb.Now()
 }

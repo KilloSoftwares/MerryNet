@@ -98,7 +98,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.primary.withOpacity(0.4),
+                        color: AppColors.primary.withValues(alpha: 0.4),
                         blurRadius: 20,
                         offset: const Offset(0, 8),
                       ),
@@ -153,7 +153,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
                         decoration: BoxDecoration(
                           border: Border(
-                            right: BorderSide(color: AppColors.textMuted.withOpacity(0.2)),
+                            right: BorderSide(color: AppColors.textMuted.withValues(alpha: 0.2)),
                           ),
                         ),
                         child: const Text(
@@ -188,7 +188,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.primary.withOpacity(0.4),
+                          color: AppColors.primary.withValues(alpha: 0.4),
                           blurRadius: 12,
                           offset: const Offset(0, 4),
                         ),
@@ -221,7 +221,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, letterSpacing: 12),
                   decoration: InputDecoration(
                     hintText: '------',
-                    hintStyle: TextStyle(letterSpacing: 12, color: AppColors.textMuted.withOpacity(0.3)),
+                    hintStyle: TextStyle(letterSpacing: 12, color: AppColors.textMuted.withValues(alpha: 0.3)),
                     counterText: '',
                   ),
                 ),

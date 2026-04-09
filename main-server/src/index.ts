@@ -7,6 +7,7 @@ import { config } from './config';
 import { connectDatabase, disconnectDatabase } from './config/database';
 import { getRedis, disconnectRedis } from './config/redis';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import { apiLimiter } from './middleware/rateLimiter';
 import { logger } from './utils/logger';
 import routes from './routes';
 import { startJobScheduler, stopJobScheduler } from './jobs/scheduler';
@@ -18,9 +19,43 @@ import { startGrpcServer, stopGrpcServer } from './grpc/server';
 
 const app = express();
 
-// Security middleware
-app.use(helmet());
-app.use(cors({ origin: config.security.corsOrigin }));
+// ============================================================
+// Security Middleware
+// ============================================================
+
+// Helmet for security headers (must be first)
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+    },
+  },
+  hsts: {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true,
+  },
+  noSniff: true,
+  xssFilter: true,
+}));
+
+// CORS configuration - more restrictive for production
+const corsOptions = {
+  origin: config.env === 'production'
+    ? process.env.ALLOWED_ORIGINS?.split(',') || ['https://maranet.app']
+    : config.security.corsOrigin,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  maxAge: 86400, // 24 hours
+};
+app.use(cors(corsOptions));
+
+// Rate limiting for all API routes
+app.use('/api', apiLimiter);
 
 // Body parsing
 app.use(express.json({ limit: '10mb' }));

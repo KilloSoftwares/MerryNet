@@ -1,5 +1,6 @@
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
+import fs from 'fs';
 import path from 'path';
 import { config } from '../config';
 import { logger } from '../utils/logger';
@@ -25,10 +26,20 @@ class GatewayClient {
 
   constructor() {
     const address = `${config.gateway.host}:${config.gateway.grpcPort}`;
-    this.client = new maranet.GatewayService(
-      address,
-      grpc.credentials.createInsecure()
-    );
+    let creds: grpc.ChannelCredentials;
+    if (config.gateway.useTLS) {
+      if (config.gateway.caFile) {
+        const rootCert = fs.readFileSync(path.resolve(config.gateway.caFile));
+        creds = grpc.credentials.createSsl(rootCert);
+      } else {
+        creds = grpc.credentials.createSsl();
+      }
+      logger.info(`🔒 Gateway gRPC TLS enabled for ${address}`);
+    } else {
+      creds = grpc.credentials.createInsecure();
+    }
+
+    this.client = new maranet.GatewayService(address, creds);
     logger.info(`🔌 Gateway gRPC client initialized for ${address}`);
   }
 

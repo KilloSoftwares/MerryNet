@@ -1,5 +1,6 @@
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
+import fs from 'fs';
 import path from 'path';
 import { config } from '../config';
 import { prisma } from '../config/database';
@@ -336,9 +337,27 @@ export function startGrpcServer(): grpc.Server {
 
   const address = `${config.grpc.host}:${config.grpc.port}`;
 
+  let creds: grpc.ServerCredentials;
+  if (config.grpc.useTLS) {
+    if (!config.grpc.certFile || !config.grpc.keyFile) {
+      throw new Error('GRPC_USE_TLS enabled but GRPC_TLS_CERT_FILE or GRPC_TLS_KEY_FILE is missing');
+    }
+    const certChain = fs.readFileSync(path.resolve(config.grpc.certFile));
+    const privateKey = fs.readFileSync(path.resolve(config.grpc.keyFile));
+    creds = grpc.ServerCredentials.createSsl(null, [
+      {
+        private_key: privateKey,
+        cert_chain: certChain,
+      },
+    ], false);
+    logger.info('🔒 gRPC TLS enabled for main server');
+  } else {
+    creds = grpc.ServerCredentials.createInsecure();
+  }
+
   server.bindAsync(
     address,
-    grpc.ServerCredentials.createInsecure(),
+    creds,
     (error, port) => {
       if (error) {
         logger.error('❌ Failed to start gRPC server:', error);

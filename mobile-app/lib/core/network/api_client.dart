@@ -1,17 +1,32 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-
-const String _baseUrl = 'http://localhost:3000/api/v1';
-const String _bootstrapUrl = 'http://localhost:8080';
+import '../config/server_config.dart';
 
 final secureStorageProvider = Provider<FlutterSecureStorage>((ref) {
   return const FlutterSecureStorage();
 });
 
+/// Provider for the current API base URL from server config
+final apiBaseUrlProvider = Provider<String>((ref) {
+  return ServerConfig().apiBaseUrl;
+});
+
+/// Provider for the current bootstrap URL from server config
+final bootstrapUrlProvider = Provider<String>((ref) {
+  return ServerConfig().bootstrapUrl;
+});
+
+/// Provider for the current server endpoint
+final currentEndpointProvider = Provider<ServerEndpoint>((ref) {
+  return ServerConfig().currentEndpoint;
+});
+
 final apiClientProvider = Provider<Dio>((ref) {
+  final baseUrl = ref.watch(apiBaseUrlProvider);
+  
   final dio = Dio(BaseOptions(
-    baseUrl: _baseUrl,
+    baseUrl: baseUrl,
     connectTimeout: const Duration(seconds: 15),
     receiveTimeout: const Duration(seconds: 15),
     headers: {
@@ -37,8 +52,9 @@ final apiClientProvider = Provider<Dio>((ref) {
         final refreshToken = await storage.read(key: 'refresh_token');
         if (refreshToken != null) {
           try {
+            final currentBaseUrl = ref.read(apiBaseUrlProvider);
             final response = await Dio().post(
-              '$_baseUrl/auth/refresh',
+              '$currentBaseUrl/auth/refresh',
               data: {'refreshToken': refreshToken},
             );
             final data = response.data['data'];
@@ -71,10 +87,17 @@ final apiClientProvider = Provider<Dio>((ref) {
 });
 
 final bootstrapClientProvider = Provider<Dio>((ref) {
+  final bootstrapUrl = ref.watch(bootstrapUrlProvider);
+  
   return Dio(BaseOptions(
-    baseUrl: _bootstrapUrl,
+    baseUrl: bootstrapUrl,
     connectTimeout: const Duration(seconds: 10),
     receiveTimeout: const Duration(seconds: 10),
     headers: {'Content-Type': 'application/json'},
   ));
+});
+
+/// Provider that exposes the ServerConfig singleton
+final serverConfigProvider = Provider<ServerConfig>((ref) {
+  return ServerConfig();
 });

@@ -128,8 +128,13 @@ cargo run
 | `JWT_EXPIRES_IN` | Token expiry | 7d |
 | `MPESA_*` | M-Pesa credentials | - |
 | `GRPC_PORT` | gRPC server port | 50051 |
+| `GRPC_USE_TLS` | Enable gRPC TLS for internal node communication | false |
+| `GRPC_TLS_CERT_FILE` | TLS certificate file path | |
+| `GRPC_TLS_KEY_FILE` | TLS private key file path | |
 | `GATEWAY_HOST` | Gateway service host | localhost |
 | `GATEWAY_GRPC_PORT` | Gateway gRPC port | 50052 |
+| `GATEWAY_USE_TLS` | Enable TLS for gateway gRPC client | false |
+| `GATEWAY_TLS_CA_FILE` | Root CA file for gateway TLS | |
 
 ### Gateway Service (gateway-service/.env)
 

@@ -64,13 +64,23 @@ jobs:
         run: npx prisma generate
 
       - name: Run linter
-        run: npm run lint || true
+        run: npm run lint
+
+      - name: Security audit (npm)
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+      - name: Check for secrets in code
+        run: |
+          echo "Checking for hardcoded secrets..."
+          ! grep -r "maranet_secret" --include="*.ts" src/ || (echo "Found default password in code!" && exit 1)
+          ! grep -r "dev-secret-change-me" --include="*.ts" src/ || (echo "Found default JWT secret!" && exit 1)
 
       - name: Type check
         run: npx tsc --noEmit
 
-      - name: Run tests
-        run: npm test || true
+      - name: Run tests with coverage
+        run: npm run test:coverage -- --coverage --coverageThreshold='{"global":{"branches":50,"functions":50,"lines":50,"statements":50}}'
         env:
           DATABASE_URL: postgresql://maranet:test_secret@localhost:5432/maranet_test
           REDIS_URL: redis://localhost:6379

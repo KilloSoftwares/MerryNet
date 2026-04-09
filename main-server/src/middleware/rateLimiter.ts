@@ -1,54 +1,99 @@
+import rateLimit from 'express-rate-limit';
 import { Request, Response, NextFunction } from 'express';
-import { cache } from '../config/redis';
-import { AppError } from '../utils/errors';
-import { config } from '../config';
+import { logger } from '../utils/logger';
 
-/**
- * Rate limiter using Redis for distributed environments
- */
-export function rateLimiter(maxRequests?: number, windowMs?: number) {
-  const max = maxRequests || config.security.rateLimitMax;
-  const window = windowMs || config.security.rateLimitWindowMs;
-  const windowSeconds = Math.ceil(window / 1000);
+// ============================================================
+// General API Rate Limiter
+// ============================================================
 
-  return async (req: Request, _res: Response, next: NextFunction) => {
-    try {
-      const identifier = req.user?.id || req.ip || 'unknown';
-      const key = `ratelimit:${req.path}:${identifier}`;
+export const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: {
+    error: 'Too many requests',
+    message: 'You have exceeded the rate limit. Please try again later.',
+  },
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  skip: (req) => {
+    // Skip rate limiting for health checks
+    return req.path === '/api/v1/health' || req.path === '/';
+  },
+});
 
-      const current = await cache.incr(key);
-      if (current === 1) {
-        await cache.expire(key, windowSeconds);
-      }
+// ============================================================
+// M-Pesa Callback Rate Limiter (More restrictive)
+// ============================================================
 
-      if (current > max) {
-        throw AppError.tooManyRequests(
-          `Rate limit exceeded. Try again in ${windowSeconds} seconds.`
-        );
-      }
+// Track failed callback attempts per IP
+const callbackAttempts = new Map<string, { count: number; firstAttempt: number }>();
 
-      next();
-    } catch (error) {
-      if (error instanceof AppError) {
-        next(error);
-      } else {
-        // If Redis is down, allow the request
-        next();
-      }
+export const mpesaCallbackLimiter = (req: Request, res: Response, next: NextFunction) => {
+  const ip = req.ip || req.connection.remoteAddress || 'unknown';
+  const now = Date.now();
+  const windowMs = 60 * 1000; // 1 minute window
+  const maxAttempts = 10; // Max 10 attempts per minute
+
+  const attempt = callbackAttempts.get(ip);
+
+  if (!attempt || now - attempt.firstAttempt > windowMs) {
+    // Reset if window expired
+    callbackAttempts.set(ip, { count: 1, firstAttempt: now });
+    next();
+    return;
+  }
+
+  if (attempt.count >= maxAttempts) {
+    logger.warn('M-Pesa callback rate limit exceeded', { ip, attempts: attempt.count });
+    res.status(429).json({
+      error: 'Too many callback attempts',
+      message: 'Rate limit exceeded. Please wait before retrying.',
+    });
+    return;
+  }
+
+  attempt.count++;
+  next();
+};
+
+// Clean up old entries periodically
+setInterval(() => {
+  const now = Date.now();
+  const windowMs = 60 * 1000;
+  for (const [ip, attempt] of callbackAttempts.entries()) {
+    if (now - attempt.firstAttempt > windowMs) {
+      callbackAttempts.delete(ip);
     }
-  };
-}
+  }
+}, 60 * 1000);
 
-/**
- * Strict rate limiter for sensitive endpoints (auth, payments)
- */
-export function strictRateLimiter() {
-  return rateLimiter(10, 60000); // 10 requests per minute
-}
+// ============================================================
+// Authentication Rate Limiter (Very restrictive)
+// ============================================================
 
-/**
- * Payment rate limiter
- */
-export function paymentRateLimiter() {
-  return rateLimiter(5, 300000); // 5 payment attempts per 5 minutes
-}
+export const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 login attempts per windowMs
+  message: {
+    error: 'Too many login attempts',
+    message: 'Please try again after 15 minutes.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true, // Only count failed attempts
+});
+
+// ============================================================
+// Payment Creation Rate Limiter
+// ============================================================
+
+export const paymentLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 5, // Max 5 payment initiations per minute per IP
+  message: {
+    error: 'Too many payment requests',
+    message: 'Please wait before initiating another payment.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});

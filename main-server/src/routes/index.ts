@@ -4,6 +4,7 @@ import subscriptionRoutes from './subscription.routes';
 import paymentRoutes from './payment.routes';
 import resellerRoutes from './reseller.routes';
 import cognitiveRoutes from './cognitive.routes';
+import chatbotRoutes from './chatbot.routes';
 
 const router = Router();
 
@@ -27,5 +28,6 @@ router.use('/payments', paymentRoutes);
 router.use('/subscriptions', subscriptionRoutes);
 router.use('/resellers', resellerRoutes);
 router.use('/cognitive', cognitiveRoutes);
+router.use('/chatbot', chatbotRoutes);
 
 export default router;

@@ -1,0 +1,86 @@
+# ============================================================
+# Maranet Zero — Log Rotation Configuration
+# ============================================================
+# Copy this file to /etc/logrotate.d/maranet
+# ============================================================
+
+# Main API Server logs
+/var/log/maranet/api/*.log {
+    daily
+    rotate 30
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 maranet maranet
+    dateext
+    dateformat -%Y%m%d
+    postrotate
+        # Signal the application to reopen log files if needed
+        systemctl reload maranet-api 2>/dev/null || true
+    endscript
+}
+
+# Gateway service logs
+/var/log/maranet/gateway/*.log {
+    daily
+    rotate 30
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 maranet maranet
+    dateext
+    dateformat -%Y%m%d
+    postrotate
+        systemctl reload maranet-gateway 2>/dev/null || true
+    endscript
+}
+
+# Nginx logs
+/var/log/nginx/*.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 www-data www-data
+    sharedscripts
+    postrotate
+        [ -f /var/run/nginx.pid ] && kill -USR1 $(cat /var/run/nginx.pid)
+    endscript
+}
+
+# Docker container logs (if using Docker)
+/var/lib/docker/containers/*/*.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 root root
+    postrotate
+        # Docker handles its own log rotation via daemon.json
+        true
+    endscript
+}
+
+# ============================================================
+# Setup Instructions:
+# 
+# 1. Create log directories:
+#    sudo mkdir -p /var/log/maranet/api
+#    sudo mkdir -p /var/log/maranet/gateway
+#    sudo chown -R maranet:maranet /var/log/maranet
+#
+# 2. Copy this file:
+#    sudo cp deploy/logrotate/maranet /etc/logrotate.d/maranet
+#
+# 3. Test the configuration:
+#    sudo logrotate -d /etc/logrotate.d/maranet
+#
+# 4. Force rotation (for testing):
+#    sudo logrotate -f /etc/logrotate.d/maranet
+# ============================================================
