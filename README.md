@@ -43,11 +43,8 @@ Maranet Zero enables end users in Kenya to purchase affordable internet access v
 - Flutter 3.16+ (mobile app)
 - Docker & Docker Compose (optional)
 
-### Development Setup
 
-> ⚠️ **Important:** Before starting, configure your environment variables. See [ENV_SETUP_GUIDE.md](ENV_SETUP_GUIDE.md) for detailed instructions.
 
-```bash
 # Clone the repo
 git clone https://github.com/maranet/MerryNet.git
 cd MerryNet
